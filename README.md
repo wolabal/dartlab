@@ -1,23 +1,39 @@
-<p align="center">
-  <img src="https://raw.githubusercontent.com/eddmpython/dartlab/master/assets/hero.svg" alt="DartLab" width="800"/>
+<div align="center">
+
+<br>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset=".github/assets/hero.svg">
+  <source media="(prefers-color-scheme: light)" srcset=".github/assets/hero.svg">
+  <img alt="DartLab — Read Beyond the Numbers" src=".github/assets/hero.svg" width="100%">
+</picture>
+
+<br>
+
+<h3>DART 공시 문서를 완벽하게 분석하는 Python 라이브러리</h3>
+
+<p>
+<img src="https://img.shields.io/badge/1-Dependency-f59e0b?style=for-the-badge&labelColor=0c0a09" alt="Dependencies">
+<img src="https://img.shields.io/badge/Polars-DataFrame-3b82f6?style=for-the-badge&labelColor=0c0a09" alt="Polars">
+<img src="https://img.shields.io/badge/Python-3.12+-f59e0b?style=for-the-badge&labelColor=0c0a09&logo=python&logoColor=white" alt="Python 3.12+">
 </p>
 
-<h3 align="center">공시의 숫자 너머를 읽다</h3>
-<p align="center"><b>Read Beyond the Numbers</b></p>
-
-<p align="center">
-  <a href="https://pypi.org/project/dartlab/"><img src="https://img.shields.io/pypi/v/dartlab?color=f59e0b&style=flat-square" alt="PyPI"/></a>
-  <a href="https://pypi.org/project/dartlab/"><img src="https://img.shields.io/pypi/pyversions/dartlab?color=3b82f6&style=flat-square" alt="Python"/></a>
-  <a href="https://github.com/eddmpython/dartlab/blob/master/LICENSE"><img src="https://img.shields.io/github/license/eddmpython/dartlab?color=64748b&style=flat-square" alt="License"/></a>
-  <a href="https://github.com/eddmpython/dartlab"><img src="https://img.shields.io/badge/deps-polars-f59e0b?style=flat-square" alt="Dependencies"/></a>
+<p>
+<a href="https://pypi.org/project/dartlab/"><img src="https://img.shields.io/pypi/v/dartlab?style=for-the-badge&color=f59e0b&labelColor=0c0a09&logo=pypi&logoColor=white" alt="PyPI"></a>
+<a href="https://pypi.org/project/dartlab/"><img src="https://img.shields.io/pypi/pyversions/dartlab?style=for-the-badge&labelColor=0c0a09&logo=python&logoColor=white" alt="Python"></a>
+<a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-a8a29e?style=for-the-badge&labelColor=0c0a09" alt="License"></a>
 </p>
 
-<p align="center">
-  <a href="https://eddmpython.github.io/dartlab/">문서</a> ·
-  <a href="https://eddmpython.github.io/dartlab/docs/">API Reference</a> ·
-  <a href="https://github.com/eddmpython/dartlab/releases/tag/data-v1">샘플 데이터</a> ·
-  <a href="https://buymeacoffee.com/eddmpython">Buy Me a Coffee ☕</a>
+<br>
+
+<p>
+<a href="https://eddmpython.github.io/dartlab/">문서</a> ·
+<a href="https://eddmpython.github.io/dartlab/docs/">API Reference</a> ·
+<a href="https://github.com/eddmpython/dartlab/releases/tag/data-v1">샘플 데이터</a> ·
+<a href="https://buymeacoffee.com/eddmpython">Buy Me a Coffee</a>
 </p>
+
+</div>
 
 ---
 
