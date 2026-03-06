@@ -12,3 +12,6 @@ wheels/
 
 CLAUDE.md
 .agent/
+
+# Data (available via gh release)
+data/
