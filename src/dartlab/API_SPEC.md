@@ -127,3 +127,27 @@ result = affiliates("005930", period="y")
 | profiles | dict[str, list[AffiliateProfile]] | {year: [profiles]} |
 | movements | dict[str, list[AffiliateMovement]] | {year: [movements]} |
 | movementDf | DataFrame \| None | 기업별 변동 시계열 |
+
+## finance.dividend
+
+```python
+from dartlab.finance.dividend import dividend
+
+result = dividend("005930")
+```
+
+### dividend(stockCode) -> DividendResult | None
+
+사업보고서 "배당에 관한 사항"에서 배당지표 시계열 추출.
+
+| 파라미터 | 타입 | 기본값 | 설명 |
+|----------|------|--------|------|
+| stockCode | str | - | 종목코드 (6자리) |
+
+### DividendResult
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| corpName | str \| None | 기업명 |
+| nYears | int | 연도 수 |
+| timeSeries | DataFrame \| None | 배당 시계열 (year, netIncome, eps, totalDividend, payoutRatio, dividendYield, dps, dpsPreferred) |
