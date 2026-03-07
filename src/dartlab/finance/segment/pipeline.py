@@ -2,7 +2,7 @@
 
 import polars as pl
 
-from dartlab.core.dataLoader import PERIOD_KINDS, loadData, extractCorpName
+from dartlab.core.dataLoader import PERIOD_KINDS, extractCorpName, loadData
 from dartlab.core.notesExtractor import extractNotesContent, findNumberedSection
 from dartlab.core.reportSelector import selectReport
 from dartlab.finance.segment.parser import parseSegmentTables

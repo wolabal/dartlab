@@ -42,8 +42,10 @@ class TestNotesDetail:
 
     def test_notes_keywords_dict(self):
         from dartlab.finance.notesDetail import NOTES_KEYWORDS
-        assert len(NOTES_KEYWORDS) == 8
+        assert len(NOTES_KEYWORDS) == 23
         assert "재고자산" in NOTES_KEYWORDS
+        assert "특수관계자" in NOTES_KEYWORDS
+        assert "우발부채" in NOTES_KEYWORDS
 
     def test_company_method(self):
         from dartlab import Company

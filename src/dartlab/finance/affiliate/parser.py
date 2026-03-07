@@ -7,7 +7,6 @@ import re
 
 from dartlab.finance.affiliate.types import AffiliateMovement, AffiliateProfile
 
-
 # ── 금액 파싱 ──────────────────────────────────────────────────
 # core.tableParser.parseAmount와 달리 "0"→0.0 반환, 횡전개 지분율(%) 처리.
 

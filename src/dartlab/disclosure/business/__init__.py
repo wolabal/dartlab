@@ -2,9 +2,9 @@
 
 from dartlab.disclosure.business.pipeline import business
 from dartlab.disclosure.business.types import (
-    BusinessSection,
     BusinessChange,
     BusinessResult,
+    BusinessSection,
 )
 
 __all__ = [

@@ -2,10 +2,10 @@
 
 import polars as pl
 
-from dartlab.core.dataLoader import loadData, extractCorpName
-from dartlab.core.reportSelector import selectReport, extractReportYear
-from dartlab.disclosure.mdna.parser import parseMdna, extractOverview, classifySection
-from dartlab.disclosure.mdna.types import MdnaSection, MdnaResult
+from dartlab.core.dataLoader import extractCorpName, loadData
+from dartlab.core.reportSelector import extractReportYear, selectReport
+from dartlab.disclosure.mdna.parser import classifySection, extractOverview, parseMdna
+from dartlab.disclosure.mdna.types import MdnaResult, MdnaSection
 
 
 def mdna(stockCode: str) -> MdnaResult | None:

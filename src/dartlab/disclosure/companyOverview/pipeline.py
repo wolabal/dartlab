@@ -2,10 +2,10 @@
 
 import polars as pl
 
-from dartlab.core.dataLoader import loadData, extractCorpName
-from dartlab.core.reportSelector import selectReport, extractReportYear
+from dartlab.core.dataLoader import extractCorpName, loadData
+from dartlab.core.reportSelector import extractReportYear, selectReport
 from dartlab.disclosure.companyOverview.parser import parseOverview
-from dartlab.disclosure.companyOverview.types import CreditRating, OverviewResult
+from dartlab.disclosure.companyOverview.types import OverviewResult
 
 
 def companyOverview(stockCode: str) -> OverviewResult | None:

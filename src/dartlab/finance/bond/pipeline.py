@@ -2,8 +2,8 @@
 
 import polars as pl
 
-from dartlab.core.dataLoader import loadData, extractCorpName
-from dartlab.core.reportSelector import selectReport, extractReportYear
+from dartlab.core.dataLoader import extractCorpName, loadData
+from dartlab.core.reportSelector import extractReportYear, selectReport
 from dartlab.finance.bond.parser import parseBondTable
 from dartlab.finance.bond.types import BondIssuance, BondResult
 

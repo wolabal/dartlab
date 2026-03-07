@@ -177,7 +177,7 @@ result.movementDf   # pl.DataFrame - 카테고리별 기초/기말 시계열
 | `nYears` | `int` | 연도 수 |
 | `reliability` | `str` | `"high"` (합계 컬럼 있음) \| `"low"` (없음) |
 | `warnings` | `list[str]` | 신뢰도 관련 경고 메시지 |
-| `movements` | `dict` | {연도: [TangibleMovement]} |
+| `movements` | `dict` | `{연도: [TangibleMovement]}` |
 | `movementDf` | `pl.DataFrame \| None` | 카테고리별 기초/기말 시계열 |
 
 ### TangibleMovement
@@ -193,7 +193,7 @@ result.movementDf   # pl.DataFrame - 카테고리별 기초/기말 시계열
 
 ## finance.notesDetail
 
-주석 세부항목 테이블. 8개 키워드 지원.
+주석 세부항목 테이블. 23개 키워드 지원.
 
 ```python
 result = company.notesDetail("재고자산")
@@ -201,7 +201,7 @@ result.tables     # dict[str, list[NotesPeriod]]
 result.tableDf    # pl.DataFrame - 항목별 시계열
 ```
 
-지원 키워드: `재고자산`, `주당이익`, `충당부채`, `차입금`, `매출채권`, `리스`, `투자부동산`, `무형자산`
+지원 키워드 (23개): `재고자산`, `주당이익`, `충당부채`, `차입금`, `매출채권`, `리스`, `투자부동산`, `무형자산`, `법인세`, `특수관계자`, `약정사항`, `금융자산`, `공정가치`, `이익잉여금`, `금융부채`, `기타포괄손익`, `사채`, `종업원급여`, `퇴직급여`, `확정급여`, `재무위험`, `우발부채`, `담보`
 
 | 속성 | 타입 | 설명 |
 |------|------|------|
@@ -209,14 +209,14 @@ result.tableDf    # pl.DataFrame - 항목별 시계열
 | `keyword` | `str` | 조회한 키워드 |
 | `nYears` | `int` | 연도 수 |
 | `unit` | `float` | 단위 (1.0 = 백만원) |
-| `tables` | `dict` | {연도: [NotesPeriod]} 기간별 테이블 |
+| `tables` | `dict` | `{연도: [NotesPeriod]}` 기간별 테이블 |
 | `tableDf` | `pl.DataFrame \| None` | 항목별 시계열 |
 
 ### NotesPeriod
 
 | 속성 | 타입 | 설명 |
 |------|------|------|
-| `pattern` | `str` | 감지된 패턴 ("A" / "B" / "C") |
+| `pattern` | `str` | 감지된 패턴 ("A" / "B" / "C" / "D") |
 | `period` | `str` | 기간명 ("당기말", "전기말" 등) |
 | `headers` | `list[str]` | 컬럼 헤더 |
 | `items` | `list[NotesItem]` | 행 데이터 (name, values) |

@@ -4,14 +4,14 @@ import re
 
 import polars as pl
 
-from dartlab.core.dataLoader import loadData, extractCorpName
-from dartlab.core.reportSelector import selectReport
+from dartlab.core.dataLoader import extractCorpName, loadData
 from dartlab.core.notesExtractor import extractNotesContent
+from dartlab.core.reportSelector import selectReport
 from dartlab.finance.costByNature.parser import (
     findCostByNatureSection,
-    parseCostByNature,
-    normalizeAccountName,
     isTotalRow,
+    normalizeAccountName,
+    parseCostByNature,
 )
 from dartlab.finance.costByNature.types import CostByNatureResult
 

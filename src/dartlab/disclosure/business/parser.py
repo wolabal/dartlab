@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-import re
 import difflib
+import re
 
 import polars as pl
-
 
 SECTION_KEYS = {
     "overview": ["사업의 개요"],

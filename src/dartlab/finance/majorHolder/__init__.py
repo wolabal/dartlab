@@ -1,4 +1,4 @@
-from dartlab.finance.majorHolder.pipeline import majorHolder, holderOverview
+from dartlab.finance.majorHolder.pipeline import holderOverview, majorHolder
 from dartlab.finance.majorHolder.types import (
     BigHolder,
     Holder,

@@ -23,12 +23,12 @@ pl.Config.set_tbl_width_chars(200)
 from dartlab.core.dataLoader import (
     DART_VIEWER,
     buildIndex,
-    loadData,
     extractCorpName,
+    loadData,
 )
 from dartlab.core.kindList import (
-    getKindList,
     codeToName,
+    getKindList,
     nameToCode,
     searchName,
 )

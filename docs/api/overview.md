@@ -41,7 +41,7 @@ c.stockCode     # "005930"
 | `.subsidiary()` | `SubsidiaryResult` | 타법인 출자 |
 | `.affiliates(period="y")` | `AffiliatesResult` | 관계기업 투자 |
 | `.tangibleAsset()` | `TangibleAssetResult` | 유형자산 변동표 |
-| `.notesDetail(keyword, period="y")` | `NotesDetailResult` | 주석 세부항목 (8개 키워드) |
+| `.notesDetail(keyword, period="y")` | `NotesDetailResult` | 주석 세부항목 (23개 키워드) |
 | `.bond()` | `BondResult` | 채무증권 발행실적 |
 | `.rawMaterial()` | `RawMaterialResult` | 원재료/설비투자 |
 | `.business()` | `BusinessResult` | 사업의 내용 |

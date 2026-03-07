@@ -25,7 +25,7 @@ def notesDetail(
 
     Args:
         stockCode: 종목코드 (6자리)
-        keyword: 주석 키워드 (재고자산, 주당이익, 충당부채, 차입금, 매출채권, 리스, 투자부동산, 무형자산)
+        keyword: 주석 키워드 (NOTES_KEYWORDS 참조, 23개 지원)
         period: "y" (연간) | "q" (분기) | "h" (반기)
 
     Returns:
@@ -39,6 +39,7 @@ def notesDetail(
     years = sorted(df["year"].unique().to_list(), reverse=True)
 
     allTables: dict[str, list[NotesPeriod]] = {}
+    unitByYear: dict[str, float] = {}
     latestUnit = 1.0
 
     for year in years:
@@ -64,6 +65,7 @@ def notesDetail(
                 continue
 
             unit = detectUnit(section)
+            unitByYear[year] = unit
             if not allTables:
                 latestUnit = unit
 
@@ -87,7 +89,7 @@ def notesDetail(
     if not allTables:
         return None
 
-    tableDf = _buildTableDf(allTables)
+    tableDf = _buildTableDf(allTables, unitByYear)
 
     return NotesDetailResult(
         corpName=corpName,
@@ -112,29 +114,52 @@ def _pickValue(values: list[str]) -> str:
     return values[0] if values else ""
 
 
+_CURRENT_PERIOD = re.compile(r"(당기|당기말|당반기|당분기|현재|전체)")
+
+
+def _isCurrentPeriod(period: str) -> bool:
+    """당기 계열 period인지 판정. 전기/전기말은 제외."""
+    if re.search(r"(전기|전반기|전분기)", period):
+        return False
+    return bool(_CURRENT_PERIOD.search(period))
+
+
 def _buildTableDf(
     allTables: dict[str, list[NotesPeriod]],
+    unitByYear: dict[str, float] | None = None,
 ) -> pl.DataFrame | None:
     """항목별 시계열 DataFrame 생성.
 
-    각 기간의 마지막 유효 값(보통 장부금액/합계)을 대표값으로 사용.
-    항목명은 공백 정규화하여 중복 방지.
+    각 연도에서 당기 블록만 선택하여 연도 컬럼으로 정렬.
+    전기 블록은 이전 연도 당기와 중복이므로 제외.
+    단위가 다른 연도는 백만원 기준으로 정규화.
     """
     itemData: dict[str, dict[str, str]] = {}
     colOrder: list[str] = []
+    colUnit: dict[str, float] = {}
 
     for year in sorted(allTables.keys(), reverse=True):
         periods = allTables[year]
+        # 당기 블록 선택 (없으면 첫 번째 블록 사용)
+        currentBlock = None
         for p in periods:
-            colName = f"{year}_{p.period}"
-            if colName not in colOrder:
-                colOrder.append(colName)
-            for item in p.items:
-                normalized = _normalizeName(item.name)
-                if normalized not in itemData:
-                    itemData[normalized] = {}
-                if item.values:
-                    itemData[normalized][colName] = _pickValue(item.values)
+            if _isCurrentPeriod(p.period):
+                currentBlock = p
+                break
+        if currentBlock is None:
+            currentBlock = periods[0]
+
+        colName = year
+        if colName not in colOrder:
+            colOrder.append(colName)
+        colUnit[colName] = (unitByYear or {}).get(year, 1.0)
+
+        for item in currentBlock.items:
+            normalized = _normalizeName(item.name)
+            if normalized not in itemData:
+                itemData[normalized] = {}
+            if item.values:
+                itemData[normalized][colName] = _pickValue(item.values)
 
     if not itemData:
         return None
@@ -144,7 +169,12 @@ def _buildTableDf(
         row: dict[str, object] = {"항목": name}
         for col in colOrder:
             raw = vals.get(col, "")
-            row[col] = parseAmount(raw)
+            amount = parseAmount(raw)
+            if amount is not None:
+                unit = colUnit.get(col, 1.0)
+                if unit != 1.0:
+                    amount = amount * unit
+            row[col] = amount
         rows.append(row)
 
     schema: dict[str, type] = {"항목": pl.Utf8}

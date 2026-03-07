@@ -2,8 +2,7 @@
 
 import re
 
-from dartlab.core.tableParser import parseAmount, detectUnit
-
+from dartlab.core.tableParser import detectUnit, parseAmount
 
 NORMALIZE_MAP = [
     ("원재료사용", ["원재료", "원부재료", "소모품사용", "소모품의사용", "상품매입"]),

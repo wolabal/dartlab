@@ -2,10 +2,10 @@ import re
 
 from dartlab.finance.summary.constants import (
     EXACT_MATCH_TOLERANCE,
-    RESTATEMENT_NAME_SIMILARITY,
-    RESTATEMENT_AMOUNT_TOLERANCE,
-    NAME_CHANGE_SIMILARITY,
     NAME_CHANGE_AMOUNT_TOLERANCE,
+    NAME_CHANGE_SIMILARITY,
+    RESTATEMENT_AMOUNT_TOLERANCE,
+    RESTATEMENT_NAME_SIMILARITY,
 )
 from dartlab.finance.summary.types import BridgeResult
 

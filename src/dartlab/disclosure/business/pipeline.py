@@ -1,18 +1,17 @@
 """사업의 내용 데이터 추출 파이프라인."""
 
-import polars as pl
 
-from dartlab.core.dataLoader import loadData, extractCorpName
-from dartlab.core.reportSelector import selectReport, extractReportYear
+from dartlab.core.dataLoader import extractCorpName, loadData
+from dartlab.core.reportSelector import extractReportYear, selectReport
 from dartlab.disclosure.business.parser import (
+    computeChanges,
     extractFromSubSections,
     extractFromUnified,
-    computeChanges,
 )
 from dartlab.disclosure.business.types import (
-    BusinessSection,
     BusinessChange,
     BusinessResult,
+    BusinessSection,
 )
 
 

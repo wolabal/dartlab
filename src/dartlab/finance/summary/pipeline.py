@@ -2,8 +2,8 @@ import re
 
 import polars as pl
 
-from dartlab.core.dataLoader import PERIOD_KINDS, loadData, extractCorpName
-from dartlab.core.reportSelector import selectReport, parsePeriodKey
+from dartlab.core.dataLoader import PERIOD_KINDS, extractCorpName, loadData
+from dartlab.core.reportSelector import parsePeriodKey, selectReport
 from dartlab.core.tableParser import extractAccounts
 from dartlab.finance.summary.bridgeMatcher import numberBridgeMatch, periodToIndex
 from dartlab.finance.summary.contentExtractor import extractSummaryContent

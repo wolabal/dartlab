@@ -194,7 +194,7 @@ result.movementDf   # 카테고리별 기초/기말 시계열
 
 ### 주석 세부항목
 
-재고자산, 차입금, 매출채권 등 8개 주석 세부항목 테이블을 추출한다.
+재고자산, 차입금, 특수관계자 등 23개 주석 세부항목 테이블을 추출한다.
 
 ```python
 result = samsung.notesDetail("재고자산")
@@ -202,7 +202,7 @@ result.tables     # {연도: [NotesPeriod]} 기간별 테이블
 result.tableDf    # 항목별 시계열 DataFrame
 ```
 
-지원 키워드: `재고자산`, `주당이익`, `충당부채`, `차입금`, `매출채권`, `리스`, `투자부동산`, `무형자산`
+지원 키워드 (23개): `재고자산`, `주당이익`, `충당부채`, `차입금`, `매출채권`, `리스`, `투자부동산`, `무형자산`, `법인세`, `특수관계자`, `약정사항`, `금융자산`, `공정가치`, `이익잉여금`, `금융부채`, `기타포괄손익`, `사채`, `종업원급여`, `퇴직급여`, `확정급여`, `재무위험`, `우발부채`, `담보`
 
 ### 채무증권
 
@@ -324,7 +324,7 @@ DartLab은 데이터의 성격에 따라 두 패키지로 나뉜다.
 | `finance.bond` | `bond(stockCode)` | `.bond()` | 채무증권 발행실적 |
 | `finance.affiliate` | `affiliates(stockCode)` | `.affiliates()` | 관계기업 투자 |
 | `finance.tangibleAsset` | `tangibleAsset(stockCode)` | `.tangibleAsset()` | 유형자산 변동표 |
-| `finance.notesDetail` | `notesDetail(stockCode, keyword)` | `.notesDetail(keyword)` | 주석 세부항목 (8개 키워드) |
+| `finance.notesDetail` | `notesDetail(stockCode, keyword)` | `.notesDetail(keyword)` | 주석 세부항목 (23개 키워드) |
 
 ### disclosure — 공시 서술형 섹션 (4개 모듈)
 
@@ -486,7 +486,7 @@ DartLab의 최종 목표는 **전자공시 데이터의 완전한 활용**이다
 - [x] 연결재무제표 BS, IS, CF
 - [x] 부문별 매출, 관계기업, 배당, 직원, 주주, 자회사
 - [x] 채무증권, 비용 성격별 분류, 원재료/설비투자
-- [x] 유형자산 변동표, 주석 세부항목 (8개 키워드)
+- [x] 유형자산 변동표, 주석 세부항목 (23개 키워드)
 - [x] 경영진단의견, 사업의 내용, 회사의 개요
 - [x] Company 통합 인터페이스
 - [x] finance/disclosure 패키지 분리

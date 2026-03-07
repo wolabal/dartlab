@@ -1,6 +1,6 @@
 import re
 
-from dartlab.core.constants import UNIT_SCALE, DEFAULT_UNIT_SCALE
+from dartlab.core.constants import DEFAULT_UNIT_SCALE, UNIT_SCALE
 
 
 def extractTables(content: str) -> list[dict]:
@@ -110,7 +110,8 @@ def extractRawTables(content: str) -> list[dict]:
 
 
 def _hasPeriodMarker(text: str) -> bool:
-    return bool(re.search(r"(당기|전기|\(당\)|\(전\))", text))
+    normalized = re.sub(r"\s+", "", text)
+    return bool(re.search(r"(당기|전기|\(당\)|\(전\))", normalized))
 
 
 def _detectPatternA(tables: list[dict]) -> list[dict] | None:
@@ -278,14 +279,77 @@ def _detectPatternC(tables: list[dict]) -> list[dict] | None:
     return None
 
 
+def _detectPatternD(tables: list[dict]) -> list[dict] | None:
+    """단일 시점 테이블 — 기간 마커 없는 일반 테이블.
+
+    약정사항, 담보, 우발부채 등 현재 상태만 나열하는 테이블.
+    2개 이상 열, 1개 이상 데이터 행, 숫자 값 포함 시 추출.
+    """
+    for table in tables:
+        allRows = [table["headers"]] + table["rows"]
+        headerText = " ".join(table["headers"])
+        if "단위" in headerText:
+            allRows = table["rows"]
+            if not allRows:
+                continue
+
+        headerRow = None
+        dataStartIdx = 0
+        for idx, row in enumerate(allRows):
+            cleanCells = [c for c in row if c.strip()]
+            if len(cleanCells) >= 2:
+                hasNumber = any(re.search(r"\d", c) for c in cleanCells)
+                if not hasNumber:
+                    headerRow = row
+                    dataStartIdx = idx + 1
+                    break
+
+        if headerRow is None:
+            if len(allRows) >= 2:
+                headerRow = allRows[0]
+                dataStartIdx = 1
+            else:
+                continue
+
+        dataRows = allRows[dataStartIdx:]
+        if not dataRows:
+            continue
+
+        cleanHeaders = [h for h in headerRow if h.strip()]
+        if len(cleanHeaders) < 2:
+            continue
+
+        hasAnyNumber = False
+        items = []
+        for row in dataRows:
+            name = row[0].strip() if row else ""
+            if not name:
+                continue
+            values = row[1:]
+            if any(re.search(r"\d", v) for v in values if v):
+                hasAnyNumber = True
+            items.append({"name": name, "values": values})
+
+        if items and hasAnyNumber:
+            return [{
+                "pattern": "D",
+                "period": "현재",
+                "headers": cleanHeaders,
+                "items": items,
+            }]
+
+    return None
+
+
 def parseNotesTable(section: str) -> list[dict] | None:
-    """주석 섹션에서 테이블 데이터 추출. 3가지 패턴 자동 감지.
+    """주석 섹션에서 테이블 데이터 추출. 4가지 패턴 자동 감지.
 
     패턴 A: 멀티레벨 헤더 (당기말/전기말 스팬)
     패턴 B: 당기/전기 분리 테이블 (XBRL 공시)
     패턴 C: 단순 테이블 (기간이 열)
+    패턴 D: 단일 시점 테이블 (기간 마커 없음)
 
-    반환: [{"pattern": "A"|"B"|"C", "period": str, "headers": list, "items": list}]
+    반환: [{"pattern": "A"|"B"|"C"|"D", "period": str, "headers": list, "items": list}]
     """
     tables = extractRawTables(section)
     if not tables:
@@ -300,6 +364,10 @@ def parseNotesTable(section: str) -> list[dict] | None:
         return result
 
     result = _detectPatternC(tables)
+    if result:
+        return result
+
+    result = _detectPatternD(tables)
     if result:
         return result
 
