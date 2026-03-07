@@ -23,8 +23,7 @@
 </p>
 
 <p>
-<a href="https://github.com/eddmpython/dartlab/releases/tag/data-v1">데이터</a> ·
-<a href="https://buymeacoffee.com/eddmpython">Buy Me a Coffee</a>
+<a href="https://github.com/eddmpython/dartlab/releases/tag/data-v1">데이터</a>
 </p>
 
 </div>
@@ -298,12 +297,6 @@ DartLab의 최종 목표는 **공시 데이터의 완전한 활용**이다.
 - [ ] 텍스트 분석 모듈 통합 (별도 프로젝트에서 배치 예정)
 - [ ] 정량 + 정성 교차 검증
 - [ ] 시각화
-
-## 지원
-
-<a href="https://buymeacoffee.com/eddmpython">
-  <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" width="180"/>
-</a>
 
 ## 라이선스
 
