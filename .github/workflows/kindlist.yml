@@ -1,0 +1,60 @@
+name: Update KindList
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # 매일 UTC 00:00 (KST 09:00)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install polars requests
+
+      - name: Download existing asset hash
+        run: |
+          mkdir -p dist
+          gh release download kindlist-latest \
+            --pattern "corpList.parquet" \
+            --dir dist/existing \
+            --clobber 2>/dev/null || true
+          if [ -f dist/existing/corpList.parquet ]; then
+            sha256sum dist/existing/corpList.parquet | awk '{print $1}' > dist/previous.sha256
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Crawl KRX KIND
+        run: python .github/scripts/updateKindList.py
+
+      - name: Upload to Release
+        if: ${{ !hashFiles('dist/SKIP') }}
+        run: |
+          if gh release view kindlist-latest > /dev/null 2>&1; then
+            gh release upload kindlist-latest \
+              dist/corpList.parquet \
+              --clobber
+            gh release edit kindlist-latest \
+              --title "KindList (auto-updated)" \
+              --notes "KRX KIND 상장법인 목록. 매일 자동 업데이트."
+          else
+            gh release create kindlist-latest \
+              dist/corpList.parquet \
+              --title "KindList (auto-updated)" \
+              --notes "KRX KIND 상장법인 목록. 매일 자동 업데이트." \
+              --latest=false
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
