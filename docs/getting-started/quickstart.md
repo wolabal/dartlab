@@ -27,7 +27,7 @@ result.BS    # 재무상태표
 result.IS    # 손익계산서
 ```
 
-분기별 데이터도 가능하다:
+분기별 데이터도 가능하다.
 
 ```python
 result = samsung.analyze(period="q")  # 분기별

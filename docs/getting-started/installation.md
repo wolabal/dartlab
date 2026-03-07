@@ -31,7 +31,7 @@ DartLab은 DART 공시 원문을 파싱한 Parquet 파일을 사용한다. [GitH
 
 ### 수동 다운로드
 
-개별 종목:
+개별 종목 하나만 받을 때.
 
 ```bash
 mkdir -p data/docsData
@@ -39,7 +39,7 @@ curl -L -o data/docsData/005930.parquet \
   "https://github.com/eddmpython/dartlab/releases/download/data-v1/005930.parquet"
 ```
 
-전체 일괄 다운로드:
+전체 일괄 다운로드.
 
 ```python
 from dartlab.core import downloadAll

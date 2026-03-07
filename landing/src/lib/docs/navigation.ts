@@ -9,15 +9,8 @@ export const navigation: NavItem[] = [
 		title: '시작하기',
 		href: '/docs/getting-started',
 		items: [
-			{ title: '설치', href: '/docs/getting-started/installation' },
-			{ title: '빠른 시작', href: '/docs/getting-started/quickstart' }
-		]
-	},
-	{
-		title: '사용 가이드',
-		href: '/docs/user-guide',
-		items: [
-			{ title: 'Bridge Matching', href: '/docs/user-guide/bridge-matching' }
+			{ title: '빠른 시작', href: '/docs/getting-started/quickstart' },
+			{ title: '설치', href: '/docs/getting-started/installation' }
 		]
 	},
 	{
@@ -28,6 +21,13 @@ export const navigation: NavItem[] = [
 			{ title: 'finance.summary', href: '/docs/api/finance-summary' },
 			{ title: 'finance.statements', href: '/docs/api/finance-statements' },
 			{ title: '기타 모듈', href: '/docs/api/finance-others' }
+		]
+	},
+	{
+		title: '사용 가이드',
+		href: '/docs/user-guide',
+		items: [
+			{ title: 'Bridge Matching', href: '/docs/user-guide/bridge-matching' }
 		]
 	}
 ];

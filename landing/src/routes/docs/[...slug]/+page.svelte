@@ -1,8 +1,11 @@
 <script lang="ts">
-	import { page } from '$app/state';
 	import { base } from '$app/paths';
-	import { tick } from 'svelte';
+	import { page } from '$app/state';
 	import { findPrevNext } from '$lib/docs/navigation';
+	import { ChevronLeft, ChevronRight } from 'lucide-svelte';
+	import { onMount, tick } from 'svelte';
+
+	let { data } = $props();
 
 	interface TocItem {
 		id: string;
@@ -10,13 +13,9 @@
 		level: number;
 	}
 
-	let { data } = $props();
-	let articleEl: HTMLElement | undefined = $state();
 	let tocItems: TocItem[] = $state([]);
 	let activeId = $state('');
-
-	const Component = $derived(data.component);
-	const prevNext = $derived(findPrevNext(page.url.pathname));
+	let articleEl: HTMLElement | undefined = $state();
 
 	function extractToc() {
 		if (!articleEl) return;
@@ -42,18 +41,18 @@
 	function observeHeadings() {
 		if (!articleEl) return;
 		const headings = articleEl.querySelectorAll('h2, h3');
-		const observer = new IntersectionObserver(
-			(entries) => {
-				for (const entry of entries) {
-					if (entry.isIntersecting) {
-						activeId = entry.target.id;
-						break;
-					}
+		if (headings.length === 0) return;
+
+		const observer = new IntersectionObserver((entries) => {
+			for (const entry of entries) {
+				if (entry.isIntersecting) {
+					activeId = entry.target.id;
+					break;
 				}
-			},
-			{ rootMargin: '-80px 0px -70% 0px', threshold: 0 }
-		);
-		headings.forEach((h) => observer.observe(h));
+			}
+		}, { rootMargin: '-80px 0px -70% 0px', threshold: 0 });
+
+		headings.forEach(h => observer.observe(h));
 		return () => observer.disconnect();
 	}
 
@@ -71,296 +70,290 @@
 			btn.textContent = 'Copy';
 			btn.addEventListener('click', () => {
 				const code = pre.querySelector('code');
-				navigator.clipboard.writeText(code?.textContent ?? '').then(() => {
+				const text = (code || pre).textContent || '';
+				navigator.clipboard.writeText(text).then(() => {
 					btn.textContent = 'Copied!';
-					setTimeout(() => {
-						btn.textContent = 'Copy';
-					}, 2000);
+					setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
 				});
 			});
 			wrapper.appendChild(btn);
 		});
 	}
 
+	let cleanup: (() => void) | undefined;
+	let mounted = false;
+
+	onMount(() => {
+		mounted = true;
+		return () => {
+			mounted = false;
+			cleanup?.();
+		};
+	});
+
+	const Component = $derived(data.component);
+	const meta = $derived(data.metadata ?? {});
+	const prevNext = $derived(findPrevNext(page.url.pathname));
+
 	$effect(() => {
-		if (Component && articleEl) {
-			tick().then(() => {
+		if (!mounted) return;
+		Component;
+		data;
+		tick().then(() => {
+			if (!mounted) return;
+			addCopyButtons();
+			extractToc();
+			cleanup?.();
+			cleanup = observeHeadings();
+			if (tocItems.length === 0 && articleEl) {
 				setTimeout(() => {
 					extractToc();
-					observeHeadings();
-					addCopyButtons();
+					cleanup?.();
+					cleanup = observeHeadings();
 				}, 200);
-			});
-		}
+			}
+		});
 	});
+
+	function scrollToHeading(id: string) {
+		const el = document.getElementById(id);
+		if (el) {
+			el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+		}
+	}
 </script>
 
 <svelte:head>
-	<title>{data.metadata?.title ?? 'Docs'} — DartLab 전자공시 분석</title>
-	{#if data.metadata?.description}
-		<meta name="description" content={data.metadata.description} />
+	<title>{meta?.title ?? 'Docs'} — DartLab 전자공시 분석</title>
+	{#if meta?.description}
+		<meta name="description" content={meta.description} />
 	{:else}
-		<meta name="description" content="DartLab {data.metadata?.title ?? ''} — DART 전자공시 문서 분석 Python 라이브러리 문서." />
+		<meta name="description" content="DartLab {meta?.title ?? ''} — DART 전자공시 문서 분석 Python 라이브러리 문서." />
 	{/if}
 </svelte:head>
 
-<div class="doc-page">
-	<article class="doc-article" bind:this={articleEl}>
-		{#if Component}
-			<Component />
-		{/if}
-	</article>
+{#if data.status === 404}
+	<div class="not-found">
+		<h1>404</h1>
+		<p>페이지를 찾을 수 없습니다.</p>
+		<a href="{base}/docs/">문서 홈으로</a>
+	</div>
+{:else}
+	<div class="doc-layout">
+		<div class="doc-content-col">
+			<article class="doc-article" bind:this={articleEl}>
+				{#if Component}
+					<Component />
+				{/if}
+			</article>
 
-	{#if tocItems.length > 0}
-		<aside class="doc-toc">
-			<p class="toc-title">목차</p>
-			<ul>
-				{#each tocItems as item}
-					<li class:toc-h3={item.level === 3}>
-						<a
-							href="#{item.id}"
-							class:active={activeId === item.id}
-						>{item.text}</a>
-					</li>
-				{/each}
-			</ul>
-		</aside>
-	{/if}
-</div>
+			{#if prevNext.prev || prevNext.next}
+				<nav class="doc-pagination">
+					{#if prevNext.prev}
+						<a href="{base}{prevNext.prev.href}" class="doc-pagination-link prev">
+							<ChevronLeft size={16} />
+							<div>
+								<span class="doc-pagination-label">이전</span>
+								<span class="doc-pagination-title">{prevNext.prev.title}</span>
+							</div>
+						</a>
+					{:else}
+						<div></div>
+					{/if}
+					{#if prevNext.next}
+						<a href="{base}{prevNext.next.href}" class="doc-pagination-link next">
+							<div>
+								<span class="doc-pagination-label">다음</span>
+								<span class="doc-pagination-title">{prevNext.next.title}</span>
+							</div>
+							<ChevronRight size={16} />
+						</a>
+					{/if}
+				</nav>
+			{/if}
+		</div>
 
-{#if prevNext.prev || prevNext.next}
-	<nav class="doc-pagination">
-		{#if prevNext.prev}
-			<a href="{base}{prevNext.prev.href}" class="prev">
-				<span class="label">이전</span>
-				<span class="title">{prevNext.prev.title}</span>
-			</a>
-		{:else}
-			<div></div>
+		{#if tocItems.length > 0}
+			<aside class="doc-toc">
+				<div class="doc-toc-inner">
+					<span class="doc-toc-heading">On this page</span>
+					<nav class="doc-toc-list">
+						{#each tocItems as item}
+							<button
+								class="doc-toc-item"
+								class:h3={item.level === 3}
+								class:active={activeId === item.id}
+								onclick={() => scrollToHeading(item.id)}
+							>
+								{item.text}
+							</button>
+						{/each}
+					</nav>
+				</div>
+			</aside>
 		{/if}
-		{#if prevNext.next}
-			<a href="{base}{prevNext.next.href}" class="next">
-				<span class="label">다음</span>
-				<span class="title">{prevNext.next.title}</span>
-			</a>
-		{/if}
-	</nav>
+	</div>
 {/if}
 
 <style>
-	.doc-page {
+	.not-found {
+		text-align: center;
+		padding: 4rem 2rem;
+	}
+	.not-found h1 {
+		font-size: 4rem;
+		font-weight: 800;
+		background: linear-gradient(135deg, #f59e0b, #fbbf24);
+		-webkit-background-clip: text;
+		-webkit-text-fill-color: transparent;
+	}
+	.not-found p { color: #a8a29e; margin: 1rem 0; }
+	.not-found a { color: #f59e0b; text-decoration: none; }
+
+	.doc-layout {
 		display: grid;
 		grid-template-columns: 1fr 200px;
 		gap: 2rem;
-		max-width: 1100px;
-		margin: 0 auto;
-		padding: 2rem 1.5rem;
 	}
 
-	.doc-article {
+	.doc-content-col {
 		min-width: 0;
-		overflow-wrap: break-word;
-	}
-
-	:global(.doc-article h1) {
-		font-size: 2rem;
-		font-weight: 700;
-		margin-bottom: 1rem;
-		color: #fafaf9;
-	}
-	:global(.doc-article h2) {
-		font-size: 1.5rem;
-		font-weight: 600;
-		margin-top: 2.5rem;
-		margin-bottom: 0.75rem;
-		padding-bottom: 0.5rem;
-		border-bottom: 1px solid #292524;
-		color: #fafaf9;
-	}
-	:global(.doc-article h3) {
-		font-size: 1.2rem;
-		font-weight: 600;
-		margin-top: 1.5rem;
-		margin-bottom: 0.5rem;
-		color: #fafaf9;
-	}
-	:global(.doc-article p) {
-		margin: 0.75rem 0;
-		line-height: 1.75;
-		color: #d6d3d1;
-	}
-	:global(.doc-article a) {
-		color: #f59e0b;
-		text-decoration: underline;
-		text-underline-offset: 2px;
-	}
-	:global(.doc-article a:hover) {
-		color: #fbbf24;
-	}
-	:global(.doc-article ul),
-	:global(.doc-article ol) {
-		margin: 0.75rem 0;
-		padding-left: 1.5rem;
-		color: #d6d3d1;
-	}
-	:global(.doc-article li) {
-		margin: 0.25rem 0;
-		line-height: 1.75;
-	}
-	:global(.doc-article code) {
-		font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
-		font-size: 0.875rem;
-		background: #1c1917;
-		padding: 0.15rem 0.4rem;
-		border-radius: 4px;
-		color: #fbbf24;
-	}
-	:global(.doc-article pre) {
-		margin: 1rem 0;
-		padding: 1rem;
-		border-radius: 8px;
-		overflow-x: auto;
-		font-size: 0.875rem;
-		line-height: 1.6;
-		border: 1px solid #292524;
-	}
-	:global(.doc-article pre code) {
-		background: none;
-		padding: 0;
-		color: inherit;
-	}
-	:global(.doc-article table) {
-		width: 100%;
-		margin: 1rem 0;
-		border-collapse: collapse;
-	}
-	:global(.doc-article th),
-	:global(.doc-article td) {
-		padding: 0.5rem 0.75rem;
-		border: 1px solid #292524;
-		text-align: left;
-		color: #d6d3d1;
-	}
-	:global(.doc-article th) {
-		background: #1c1917;
-		font-weight: 600;
-		color: #fafaf9;
-	}
-	:global(.doc-article blockquote) {
-		margin: 1rem 0;
-		padding: 0.75rem 1rem;
-		border-left: 3px solid #f59e0b;
-		background: #1c1917;
-		border-radius: 0 6px 6px 0;
-		color: #d6d3d1;
-	}
-	:global(.doc-article hr) {
-		border: none;
-		border-top: 1px solid #292524;
-		margin: 2rem 0;
-	}
-
-	:global(.copy-btn) {
-		position: absolute;
-		top: 0.5rem;
-		right: 0.5rem;
-		padding: 0.25rem 0.5rem;
-		font-size: 0.75rem;
-		background: #292524;
-		color: #a8a29e;
-		border: 1px solid #44403c;
-		border-radius: 4px;
-		cursor: pointer;
-		opacity: 0;
-		transition: opacity 0.2s;
-	}
-	:global(div:hover > .copy-btn) {
-		opacity: 1;
-	}
-	:global(.copy-btn:hover) {
-		background: #44403c;
-		color: #fafaf9;
 	}
 
 	.doc-toc {
 		position: sticky;
-		top: 5rem;
-		max-height: calc(100vh - 6rem);
+		top: 72px;
+		height: fit-content;
+		max-height: calc(100vh - 90px);
 		overflow-y: auto;
-		font-size: 0.8rem;
+		scrollbar-width: thin;
+		scrollbar-color: rgba(168, 162, 158, 0.15) transparent;
 	}
-	.toc-title {
-		font-weight: 600;
-		color: #a8a29e;
-		margin-bottom: 0.5rem;
-		text-transform: uppercase;
-		font-size: 0.7rem;
-		letter-spacing: 0.05em;
+
+	.doc-toc-inner {
+		padding-top: 0.5rem;
 	}
-	.doc-toc ul {
-		list-style: none;
-		padding: 0;
-		margin: 0;
-	}
-	.doc-toc li {
-		margin: 0.15rem 0;
-	}
-	.toc-h3 {
-		padding-left: 1rem;
-	}
-	.doc-toc a {
-		color: #78716c;
-		text-decoration: none;
-		transition: color 0.15s;
+
+	.doc-toc-heading {
 		display: block;
-		padding: 0.15rem 0;
+		font-size: 0.7rem;
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		color: #57534e;
+		margin-bottom: 0.6rem;
 	}
-	.doc-toc a:hover {
+
+	.doc-toc-list {
+		display: flex;
+		flex-direction: column;
+	}
+
+	.doc-toc-item {
+		display: block;
+		width: 100%;
+		text-align: left;
+		padding: 0.2rem 0 0.2rem 0.6rem;
+		font-size: 0.75rem;
+		color: #78716c;
+		background: none;
+		border: none;
+		border-left: 2px solid transparent;
+		cursor: pointer;
+		transition: all 0.12s;
+		line-height: 1.4;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.doc-toc-item:hover {
 		color: #d6d3d1;
 	}
-	.doc-toc a.active {
+
+	.doc-toc-item.active {
 		color: #f59e0b;
+		border-left-color: #f59e0b;
+	}
+
+	.doc-toc-item.h3 {
+		padding-left: 1.1rem;
+		font-size: 0.72rem;
+	}
+
+	:global(.copy-btn) {
+		position: absolute;
+		top: 8px;
+		right: 8px;
+		padding: 4px 10px;
+		font-size: 0.7rem;
+		font-family: 'JetBrains Mono', monospace;
+		background: rgba(168, 162, 158, 0.15);
+		color: #a8a29e;
+		border: 1px solid rgba(168, 162, 158, 0.2);
+		border-radius: 4px;
+		cursor: pointer;
+		opacity: 0;
+		transition: opacity 0.15s, background 0.15s;
+		z-index: 1;
+	}
+	:global(.copy-btn:hover) {
+		background: rgba(245, 158, 11, 0.2);
+		color: #f59e0b;
+		border-color: rgba(245, 158, 11, 0.4);
+	}
+	:global(div:hover > .copy-btn) {
+		opacity: 1;
 	}
 
 	.doc-pagination {
 		display: flex;
 		justify-content: space-between;
-		max-width: 1100px;
-		margin: 2rem auto;
-		padding: 0 1.5rem 2rem;
 		gap: 1rem;
+		margin-top: 3rem;
+		padding-top: 1.5rem;
+		border-top: 1px solid rgba(168, 162, 158, 0.1);
 	}
-	.doc-pagination a {
+
+	.doc-pagination-link {
 		display: flex;
-		flex-direction: column;
-		padding: 1rem 1.25rem;
-		border: 1px solid #292524;
+		align-items: center;
+		gap: 0.75rem;
+		padding: 0.75rem 1rem;
 		border-radius: 8px;
+		border: 1px solid rgba(168, 162, 158, 0.1);
 		text-decoration: none;
-		transition: border-color 0.2s;
-		min-width: 0;
+		color: #a8a29e;
+		transition: all 0.15s;
+		max-width: 45%;
 	}
-	.doc-pagination a:hover {
+
+	.doc-pagination-link:hover {
 		border-color: #f59e0b;
+		color: #f59e0b;
 	}
-	.doc-pagination .prev {
-		align-items: flex-start;
-	}
-	.doc-pagination .next {
-		align-items: flex-end;
+
+	.doc-pagination-link.next {
 		margin-left: auto;
+		text-align: right;
 	}
-	.doc-pagination .label {
-		font-size: 0.75rem;
+
+	.doc-pagination-label {
+		display: block;
+		font-size: 0.7rem;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
 		color: #78716c;
 	}
-	.doc-pagination .title {
-		color: #f59e0b;
+
+	.doc-pagination-title {
+		display: block;
+		font-size: 0.9rem;
 		font-weight: 500;
 	}
 
-	@media (max-width: 1024px) {
-		.doc-page {
+	@media (max-width: 1200px) {
+		.doc-layout {
 			grid-template-columns: 1fr;
 		}
 		.doc-toc {
