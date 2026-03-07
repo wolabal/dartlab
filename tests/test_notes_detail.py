@@ -1,0 +1,53 @@
+"""finance.notesDetail 테스트."""
+
+import polars as pl
+import pytest
+
+from tests.conftest import SAMSUNG, requires_samsung
+
+
+@requires_samsung
+class TestNotesDetail:
+    def test_inventory(self):
+        from dartlab.finance.notesDetail import notesDetail
+        r = notesDetail(SAMSUNG, "재고자산")
+        assert r is not None
+        assert r.corpName == "삼성전자"
+        assert r.keyword == "재고자산"
+        assert r.nYears >= 1
+
+    def test_table_df(self):
+        from dartlab.finance.notesDetail import notesDetail
+        r = notesDetail(SAMSUNG, "재고자산")
+        assert r is not None
+        assert r.tableDf is not None
+        assert isinstance(r.tableDf, pl.DataFrame)
+        assert "항목" in r.tableDf.columns
+        assert len(r.tableDf) >= 1
+
+    @pytest.mark.parametrize("keyword", [
+        "재고자산", "주당이익", "충당부채", "차입금", "매출채권", "무형자산",
+    ])
+    def test_keywords(self, keyword):
+        from dartlab.finance.notesDetail import notesDetail
+        r = notesDetail(SAMSUNG, keyword)
+        assert r is not None
+        assert r.keyword == keyword
+        assert r.nYears >= 1
+
+    def test_invalid_keyword_returns_none(self):
+        from dartlab.finance.notesDetail import notesDetail
+        r = notesDetail(SAMSUNG, "존재하지않는키워드")
+        assert r is None
+
+    def test_notes_keywords_dict(self):
+        from dartlab.finance.notesDetail import NOTES_KEYWORDS
+        assert len(NOTES_KEYWORDS) == 8
+        assert "재고자산" in NOTES_KEYWORDS
+
+    def test_company_method(self):
+        from dartlab import Company
+        c = Company(SAMSUNG)
+        r = c.notesDetail("차입금")
+        assert r is not None
+        assert r.keyword == "차입금"

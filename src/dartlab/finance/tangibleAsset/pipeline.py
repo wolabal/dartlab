@@ -2,10 +2,10 @@
 
 import polars as pl
 
-from dartlab.core.dataLoader import loadData, extractCorpName
+from dartlab.core.dataLoader import extractCorpName, loadData
 from dartlab.core.notesExtractor import extractNotesContent, findNumberedSection
 from dartlab.core.reportSelector import selectReport
-from dartlab.finance.tangibleAsset.parser import findMovementTables, getTotalValue
+from dartlab.finance.tangibleAsset.parser import findMovementTables
 from dartlab.finance.tangibleAsset.types import TangibleAssetResult, TangibleMovement
 
 

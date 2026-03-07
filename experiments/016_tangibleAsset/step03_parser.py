@@ -1,14 +1,21 @@
-"""유형자산 변동표 파서.
+"""유형자산 변동표 파서 실험 v2.
 
 핵심 전략:
-1. 당기/전기 블록 분리
-2. 각 블록에서 자산 카테고리 헤더 + 기초~기말 변동행 추출
-3. 복합 블록(취득원가/감가상각/순장부금액)에서 최적 서브테이블 선택
+1. findNumberedSection으로 유형자산 섹션 추출
+2. 당기/전기 블록 분리
+3. 각 블록에서 자산 카테고리 헤더 + 기초~기말 변동행 추출
+4. 총장부금액 테이블(세로 나열)은 건너뜀
 """
 
 import re
+import sys
+sys.path.insert(0, "src")
 
-from dartlab.core.tableParser import detectUnit, parseAmount
+from dartlab.core.dataLoader import loadData, extractCorpName
+from dartlab.core.reportSelector import selectReport
+from dartlab.core.notesExtractor import extractNotesContent, findNumberedSection
+from dartlab.core.tableParser import parseAmount, detectUnit
+
 
 LABEL_MAP = {
     "기초 유형자산": "기초",
@@ -33,6 +40,7 @@ LABEL_MAP = {
     "사업결합을 통한 취득, 유형자산": "사업결합",
     "사업결합을 통한 취득": "사업결합",
     "사업결합": "사업결합",
+    "사업결합을 통한 취득": "사업결합",
     "감가상각비, 유형자산": "감가상각",
     "감가상각비": "감가상각",
     "감가상각(*2)": "감가상각",
@@ -89,8 +97,6 @@ DESCRIPTION_MARKERS = [
     "기술", "설명", "사건", "상황", "참조", "주석",
 ]
 
-_END_ALIASES = ("장부금액", "장부금액 합계", "순장부금액", "총장부금액", "기말금액")
-
 
 def splitCells(line: str) -> list[str]:
     parts = line.split("|")
@@ -145,7 +151,9 @@ def normalizeLabel(label: str) -> str:
 
 
 def splitPeriodBlocks(section: str) -> list[tuple[str, str]]:
-    """섹션을 당기/전기 블록으로 분리."""
+    """섹션을 당기/전기 블록으로 분리.
+    Returns list of (period_name, block_text).
+    """
     lines = section.split("\n")
     blocks = []
     currentPeriod = None
@@ -259,7 +267,9 @@ def splitPeriodBlocks(section: str) -> list[tuple[str, str]]:
 def parseMovementBlock(block: str, period: str):
     """한 기간 블록에서 변동표 파싱.
 
-    복합 블록에서 여러 서브테이블을 발견하면 모두 반환.
+    복합 블록(취득원가/감가상각누계액/순장부금액 등)에서
+    여러 서브테이블을 발견하면 모두 반환.
+
     Returns list of parsed dicts, or None.
     """
     lines = block.split("\n")
@@ -293,10 +303,12 @@ def parseMovementBlock(block: str, period: str):
         assetCount = sum(1 for c in cells if isAssetCategory(c))
         if assetCount >= 3:
             if headerCategories is None:
+                # 첫 헤더
                 headerCategories = [c.strip() for c in cells if c.strip()]
                 if headerCategories and headerCategories[0] == "구분":
                     headerCategories = headerCategories[1:]
             elif foundStart and any(r["label"] == "기말" for r in dataRows):
+                # 기초→기말 완료 후 새 서브테이블 헤더
                 allResults.append({
                     "period": period,
                     "unit": unit,
@@ -308,6 +320,7 @@ def parseMovementBlock(block: str, period: str):
                     headerCategories = headerCategories[1:]
                 dataRows = []
                 foundStart = False
+            # 그 외(다단 헤더 2번째 줄 등)는 무시
             continue
 
         if headerCategories is None:
@@ -331,6 +344,7 @@ def parseMovementBlock(block: str, period: str):
         normLabel = normalizeLabel(label)
 
         if normLabel == "기초":
+            # 기초를 다시 만나면 이전 서브테이블 저장 후 리셋
             if dataRows and foundStart:
                 hasStartPrev = any(r["label"] == "기초" for r in dataRows)
                 if hasStartPrev:
@@ -365,6 +379,7 @@ def parseMovementBlock(block: str, period: str):
 
         dataRows.append({"label": normLabel, "values": values})
 
+    # 마지막 서브테이블 저장
     if dataRows and headerCategories:
         hasStart = any(r["label"] == "기초" for r in dataRows)
         if hasStart:
@@ -379,7 +394,17 @@ def parseMovementBlock(block: str, period: str):
 
 
 def parseTransposedBlock(block: str, period: str):
-    """전치 변동표 파싱. 변동항목이 헤더, 자산 카테고리가 행 라벨."""
+    """전치 변동표 파싱. 변동항목이 헤더, 자산 카테고리가 행 라벨.
+
+    KB금융, SK이노베이션, SK, 삼성바이오로직스 포맷.
+    헤더: | 구분 | 기초 | 취득 | 처분 | 감가상각 | ... | 기말 |
+    행:   | 토지 | 값   | 값   | 값   | 값       | ... | 값   |
+
+    고려아연 포맷 (다단 헤더).
+    헤더: | | | | | 기초금액 | 취득금액 | ... | 기말금액 |
+    행:   | 장부금액 | 취득원가 | 유형자산 | 토지 | 값 | 값 | ... |
+    행:   | 건물 | 값 | 값 | ... |
+    """
     lines = block.split("\n")
     unit = detectUnit(block)
 
@@ -541,17 +566,17 @@ def _deduplicateRows(rows):
 
 
 def _computeEnd(parsed):
-    """기말 행이 없으면 기초 + 변동항목 합산으로 계산.
+    """기말 행이 없으면 기초 + 변동항목 합산으로 계산."""
+    labels = [r["label"] for r in parsed["rows"]]
 
-    Returns (parsed, computed) — computed=True면 기말이 계산으로 생성됨.
-    """
+    END_ALIASES = ("장부금액", "장부금액 합계", "순장부금액", "총장부금액", "기말금액")
     for row in parsed["rows"]:
-        if row["label"] in _END_ALIASES:
+        if row["label"] in END_ALIASES:
             row["label"] = "기말"
 
     labels = [r["label"] for r in parsed["rows"]]
     if "기말" in labels or "기초" not in labels:
-        return parsed, False
+        return parsed
 
     cats = parsed["categories"]
     endValues = {}
@@ -566,15 +591,11 @@ def _computeEnd(parsed):
         endValues[cat] = None if allNone else total
 
     parsed["rows"].append({"label": "기말", "values": endValues})
-    return parsed, True
+    return parsed
 
 
 def findMovementTables(section: str):
-    """유형자산 주석에서 변동표를 찾아 파싱.
-
-    Returns list of parsed dicts (period, unit, categories, rows)
-    and metadata dict with reliability info.
-    """
+    """유형자산 주석에서 변동표를 찾아 파싱."""
     blocks = splitPeriodBlocks(section)
 
     if not blocks:
@@ -591,27 +612,119 @@ def findMovementTables(section: str):
             allParsed.append(parsed)
 
     results = []
-    warnings = []
     for period in ("당기", "전기"):
         candidates = [p for p in allParsed if p["period"] == period]
         if not candidates:
             continue
+        # score=-1 (음수값 블록) 제외
         good = [c for c in candidates if _blockScore(c) >= 0]
         if not good:
             continue
         best = max(good, key=_blockScore)
         best["rows"] = _deduplicateRows(best["rows"])
-        best, computed = _computeEnd(best)
-        if computed:
-            warnings.append("기말 행이 계산으로 생성됨 (기초+변동 합산)")
+        best = _computeEnd(best)
         results.append(best)
 
-    return results, warnings
+    return results
 
 
 def getTotalValue(row, categories):
-    """합계 카테고리의 값을 반환."""
     for cat in categories:
         if "합계" in cat or "합 계" in cat:
             return row["values"].get(cat)
     return None
+
+
+TARGETS = [
+    ("005930", "삼성전자"),
+    ("000660", "SK하이닉스"),
+    ("035420", "NAVER"),
+    ("055550", "신한지주"),
+    ("006400", "삼성SDI"),
+    ("051910", "LG화학"),
+    ("005380", "현대자동차"),
+    ("000270", "기아"),
+    ("035720", "카카오"),
+    ("105560", "KB금융"),
+    ("068270", "셀트리온"),
+    ("003550", "LG"),
+    ("207940", "삼성바이오로직스"),
+    ("012330", "현대모비스"),
+    ("066570", "LG전자"),
+    ("096770", "SK이노베이션"),
+    ("034730", "SK"),
+    ("316140", "우리금융지주"),
+    ("003490", "대한항공"),
+]
+
+
+def getSection(code):
+    df = loadData(code)
+    corpName = extractCorpName(df)
+    years = sorted(df["year"].unique().to_list(), reverse=True)
+    for year in years[:2]:
+        report = selectReport(df, year, reportKind="annual")
+        if report is None:
+            continue
+        notes = extractNotesContent(report)
+        if not notes:
+            continue
+        section = findNumberedSection(notes, "유형자산")
+        if section:
+            return corpName, year, section
+    return corpName, None, None
+
+
+if __name__ == "__main__":
+    print("=" * 80)
+    print("유형자산 변동표 파서 v2")
+    print("=" * 80)
+
+    success = 0
+    fail = 0
+    failList = []
+
+    for code, name in TARGETS:
+        corpName, year, section = getSection(code)
+        print(f"\n{'─' * 60}")
+        print(f"[{code}] {corpName}")
+
+        if section is None:
+            print("  → 유형자산 주석 없음")
+            fail += 1
+            failList.append(f"{code} {name}: 주석 없음")
+            continue
+
+        movements = findMovementTables(section)
+        if not movements:
+            print(f"  → {year}년: 변동표 파싱 실패")
+            fail += 1
+            failList.append(f"{code} {name}: 파싱 실패")
+            continue
+
+        success += 1
+        for mv in movements:
+            cats = mv["categories"]
+            print(f"  [{mv['period']}] 카테고리 {len(cats)}개: {cats[:6]}{'...' if len(cats) > 6 else ''}")
+            for row in mv["rows"]:
+                total = getTotalValue(row, cats)
+                if total is not None:
+                    print(f"    {row['label']:<16s} → 합계: {total:>18,.0f}")
+                else:
+                    lastVal = None
+                    for cat in reversed(cats):
+                        v = row["values"].get(cat)
+                        if v is not None:
+                            lastVal = v
+                            break
+                    if lastVal is not None:
+                        print(f"    {row['label']:<16s} → 마지막열: {lastVal:>15,.0f}")
+                    else:
+                        print(f"    {row['label']:<16s} → (값 없음)")
+
+    print(f"\n{'=' * 80}")
+    print(f"성공: {success}/{len(TARGETS)}, 실패: {fail}/{len(TARGETS)}")
+    if failList:
+        print("실패 목록:")
+        for f in failList:
+            print(f"  - {f}")

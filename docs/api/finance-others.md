@@ -159,6 +159,70 @@ result.crossCheck   # 교차 검증 결과
 
 ---
 
+## finance.tangibleAsset
+
+유형자산 변동표. 토지, 건물, 기계장치 등 카테고리별 취득/처분/감가상각.
+
+```python
+result = company.tangibleAsset()
+result.reliability  # "high" | "low"
+result.warnings     # list[str] - 신뢰도 경고
+result.movements    # dict[str, list[TangibleMovement]]
+result.movementDf   # pl.DataFrame - 카테고리별 기초/기말 시계열
+```
+
+| 속성 | 타입 | 설명 |
+|------|------|------|
+| `corpName` | `str \| None` | 기업명 |
+| `nYears` | `int` | 연도 수 |
+| `reliability` | `str` | `"high"` (합계 컬럼 있음) \| `"low"` (없음) |
+| `warnings` | `list[str]` | 신뢰도 관련 경고 메시지 |
+| `movements` | `dict` | {연도: [TangibleMovement]} |
+| `movementDf` | `pl.DataFrame \| None` | 카테고리별 기초/기말 시계열 |
+
+### TangibleMovement
+
+| 속성 | 타입 | 설명 |
+|------|------|------|
+| `period` | `str` | "당기" / "전기" |
+| `categories` | `list[str]` | 자산 카테고리 (토지, 건물, ...) |
+| `rows` | `list[dict]` | 변동 행 (기초, 취득, 처분, 감가상각, 기말 등) |
+| `unit` | `float` | 단위 (1.0 = 백만원) |
+
+---
+
+## finance.notesDetail
+
+주석 세부항목 테이블. 8개 키워드 지원.
+
+```python
+result = company.notesDetail("재고자산")
+result.tables     # dict[str, list[NotesPeriod]]
+result.tableDf    # pl.DataFrame - 항목별 시계열
+```
+
+지원 키워드: `재고자산`, `주당이익`, `충당부채`, `차입금`, `매출채권`, `리스`, `투자부동산`, `무형자산`
+
+| 속성 | 타입 | 설명 |
+|------|------|------|
+| `corpName` | `str \| None` | 기업명 |
+| `keyword` | `str` | 조회한 키워드 |
+| `nYears` | `int` | 연도 수 |
+| `unit` | `float` | 단위 (1.0 = 백만원) |
+| `tables` | `dict` | {연도: [NotesPeriod]} 기간별 테이블 |
+| `tableDf` | `pl.DataFrame \| None` | 항목별 시계열 |
+
+### NotesPeriod
+
+| 속성 | 타입 | 설명 |
+|------|------|------|
+| `pattern` | `str` | 감지된 패턴 ("A" / "B" / "C") |
+| `period` | `str` | 기간명 ("당기말", "전기말" 등) |
+| `headers` | `list[str]` | 컬럼 헤더 |
+| `items` | `list[NotesItem]` | 행 데이터 (name, values) |
+
+---
+
 ## finance.rawMaterial
 
 원재료 매입, 유형자산, 설비투자 현황.

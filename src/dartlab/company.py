@@ -360,6 +360,21 @@ class Company:
         from dartlab.finance.affiliate import affiliates
         return affiliates(self.stockCode, period=period)
 
+    def notesDetail(self, keyword: str, period: str = "y"):
+        """주석 세부항목 테이블 추출.
+
+        Args:
+            keyword: 주석 키워드 (재고자산, 주당이익, 충당부채, 차입금, 매출채권, 리스, 투자부동산, 무형자산)
+            period: "y" (연간) | "q" (분기) | "h" (반기).
+
+        Returns:
+            NotesDetailResult | None.
+            - tables: {연도: [NotesPeriod]} 기간별 테이블
+            - tableDf: 항목별 시계열 DataFrame
+        """
+        from dartlab.finance.notesDetail import notesDetail
+        return notesDetail(self.stockCode, keyword=keyword, period=period)
+
     def tangibleAsset(self):
         """유형자산 변동표 추출 (연결재무제표 주석).
 

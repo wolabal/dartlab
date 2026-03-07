@@ -40,8 +40,12 @@ c.stockCode     # "005930"
 | `.employee()` | `EmployeeResult` | 직원 현황 |
 | `.subsidiary()` | `SubsidiaryResult` | 타법인 출자 |
 | `.affiliates(period="y")` | `AffiliatesResult` | 관계기업 투자 |
+| `.tangibleAsset()` | `TangibleAssetResult` | 유형자산 변동표 |
+| `.notesDetail(keyword, period="y")` | `NotesDetailResult` | 주석 세부항목 (8개 키워드) |
 | `.bond()` | `BondResult` | 채무증권 발행실적 |
 | `.rawMaterial()` | `RawMaterialResult` | 원재료/설비투자 |
+| `.business()` | `BusinessResult` | 사업의 내용 |
+| `.overview()` | `OverviewResult` | 회사의 개요 |
 | `.mdna()` | `MdnaResult` | 경영진단 및 분석의견 |
 
 ## 함수 직접 호출
@@ -58,8 +62,12 @@ from dartlab.finance.affiliate import affiliates
 from dartlab.finance.subsidiary import subsidiary
 from dartlab.finance.bond import bond
 from dartlab.finance.costByNature import costByNature
-from dartlab.finance.rawMaterial import rawMaterial
-from dartlab.finance.mdna import mdna
+from dartlab.finance.tangibleAsset import tangibleAsset
+from dartlab.finance.notesDetail import notesDetail
+from dartlab.disclosure.rawMaterial import rawMaterial
+from dartlab.disclosure.business import business
+from dartlab.disclosure.companyOverview import companyOverview
+from dartlab.disclosure.mdna import mdna
 ```
 
 ## 유틸리티
@@ -74,7 +82,7 @@ downloadAll()            # 전체 데이터 일괄 다운로드
 
 ## period 파라미터
 
-`analyze`, `statements`, `segments`, `costByNature`, `affiliates`는 `period` 파라미터를 지원한다.
+`analyze`, `statements`, `segments`, `costByNature`, `affiliates`, `notesDetail`은 `period` 파라미터를 지원한다.
 
 | 값 | 의미 | 포함 보고서 |
 |-----|------|------------|
