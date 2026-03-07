@@ -477,7 +477,7 @@ result.affiliateDf   # name | listed
 | `listedCount` | `int \| None` | 상장 계열사 수 |
 | `unlistedCount` | `int \| None` | 비상장 계열사 수 |
 | `totalCount` | `int \| None` | 총 계열사 수 |
-| `affiliates` | `list[dict]` | 계열사 목록 [{name, listed}] |
+| `affiliates` | `list[dict]` | 계열사 목록 `[{name, listed}]` |
 | `affiliateDf` | `pl.DataFrame \| None` | 계열사 DataFrame |
 
 ---
@@ -516,8 +516,8 @@ result.orderDf  # 수주상황 DataFrame
 | `corpName` | `str \| None` | 기업명 |
 | `nYears` | `int` | 연도 수 |
 | `unit` | `str` | 단위 (억원, 백만원 등) |
-| `sales` | `list[dict]` | 매출실적 [{label, values}] |
-| `orders` | `list[dict]` | 수주상황 [{label, values}] |
+| `sales` | `list[dict]` | 매출실적 `[{label, values}]` |
+| `orders` | `list[dict]` | 수주상황 `[{label, values}]` |
 | `noData` | `bool` | 해당사항 없음 |
 | `salesDf` | `pl.DataFrame \| None` | 매출실적 DataFrame |
 | `orderDf` | `pl.DataFrame \| None` | 수주상황 DataFrame |
@@ -538,7 +538,7 @@ result.productDf  # label | amount | ratio
 | `corpName` | `str \| None` | 기업명 |
 | `nYears` | `int` | 연도 수 |
 | `unit` | `str` | 단위 |
-| `products` | `list[dict]` | 제품 목록 [{label, amount, ratio}] |
+| `products` | `list[dict]` | 제품 목록 `[{label, amount, ratio}]` |
 | `noData` | `bool` | 해당사항 없음 |
 | `productDf` | `pl.DataFrame \| None` | 제품 DataFrame |
 
@@ -559,8 +559,8 @@ result.derivativeDf  # 파생상품 계약 DataFrame
 | `corpName` | `str \| None` | 기업명 |
 | `nYears` | `int` | 연도 수 |
 | `unit` | `str` | 단위 |
-| `fxSensitivity` | `list[dict]` | 환율 민감도 [{currency, upImpact, downImpact}] |
-| `derivatives` | `list[dict]` | 파생상품 [{label, values}] |
+| `fxSensitivity` | `list[dict]` | 환율 민감도 `[{currency, upImpact, downImpact}]` |
+| `derivatives` | `list[dict]` | 파생상품 `[{label, values}]` |
 | `noData` | `bool` | 해당사항 없음 |
 | `textOnly` | `bool` | 서술형만 존재 |
 | `fxDf` | `pl.DataFrame \| None` | 환율 민감도 DataFrame |
