@@ -375,6 +375,68 @@ class Company:
         from dartlab.finance.notesDetail import notesDetail
         return notesDetail(self.stockCode, keyword=keyword, period=period)
 
+    def affiliateGroup(self):
+        """계열회사 현황 추출.
+
+        Returns:
+            AffiliateGroupResult | None.
+            - groupName: 기업집단명
+            - listedCount/unlistedCount/totalCount: 상장/비상장/합계 수
+            - affiliates: 계열사 목록 [{name, listed}, ...]
+            - affiliateDf: 계열사 목록 DataFrame (name, listed)
+        """
+        from dartlab.finance.affiliateGroup import affiliateGroup
+        return affiliateGroup(self.stockCode)
+
+    def fundraising(self):
+        """증권 발행(증자/감자) 이력 추출.
+
+        Returns:
+            FundraisingResult | None.
+            - issuances: 발행 이력 [{date, issueType, stockType, quantity, ...}]
+            - noData: 발행 실적 없음 여부
+            - issuanceDf: 발행 이력 DataFrame
+        """
+        from dartlab.finance.fundraising import fundraising
+        return fundraising(self.stockCode)
+
+    def productService(self):
+        """주요 제품 및 서비스 추출.
+
+        Returns:
+            ProductServiceResult | None.
+            - unit: 단위
+            - products: [{label, amount, ratio}]
+            - productDf: DataFrame (label | amount | ratio)
+        """
+        from dartlab.finance.productService import productService
+        return productService(self.stockCode)
+
+    def salesOrder(self):
+        """매출 및 수주상황 추출.
+
+        Returns:
+            SalesOrderResult | None.
+            - unit: 단위 (억원, 백만원 등)
+            - sales: 매출실적 [{label, values}]
+            - orders: 수주상황 [{label, values}]
+            - salesDf/orderDf: DataFrame
+        """
+        from dartlab.finance.salesOrder import salesOrder
+        return salesOrder(self.stockCode)
+
+    def riskDerivative(self):
+        """위험관리 및 파생거래 추출.
+
+        Returns:
+            RiskDerivativeResult | None.
+            - fxSensitivity: 환율 민감도 [{currency, upImpact, downImpact}]
+            - derivatives: 파생상품 계약 [{label, values}]
+            - fxDf/derivativeDf: DataFrame
+        """
+        from dartlab.finance.riskDerivative import riskDerivative
+        return riskDerivative(self.stockCode)
+
     def audit(self):
         """감사의견 + 감사보수 시계열 추출.
 

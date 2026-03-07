@@ -190,3 +190,54 @@ class TestInternalControl:
         assert r is not None
         assert r.controlDf is not None
         assert isinstance(r.controlDf, pl.DataFrame)
+
+
+@requires_samsung
+class TestAffiliateGroup:
+    def test_basic(self):
+        from dartlab.finance.affiliateGroup import affiliateGroup
+        r = affiliateGroup(SAMSUNG)
+        assert r is not None
+        assert r.groupName is not None
+        assert r.affiliateDf is not None
+        assert isinstance(r.affiliateDf, pl.DataFrame)
+
+
+@requires_samsung
+class TestFundraising:
+    def test_basic(self):
+        from dartlab.finance.fundraising import fundraising
+        r = fundraising(SAMSUNG)
+        assert r is not None
+        # 삼성전자는 발행 실적 없음
+        assert r.noData is True
+
+
+@requires_samsung
+class TestSalesOrder:
+    def test_basic(self):
+        from dartlab.finance.salesOrder import salesOrder
+        r = salesOrder(SAMSUNG)
+        assert r is not None
+        assert r.salesDf is not None
+        assert isinstance(r.salesDf, pl.DataFrame)
+
+
+@requires_samsung
+class TestProductService:
+    def test_basic(self):
+        from dartlab.finance.productService import productService
+        r = productService(SAMSUNG)
+        assert r is not None
+        assert r.productDf is not None
+        assert isinstance(r.productDf, pl.DataFrame)
+
+
+@requires_samsung
+class TestRiskDerivative:
+    def test_basic(self):
+        from dartlab.finance.riskDerivative import riskDerivative
+        r = riskDerivative(SAMSUNG)
+        assert r is not None
+        assert r.fxDf is not None
+        assert isinstance(r.fxDf, pl.DataFrame)

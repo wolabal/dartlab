@@ -456,3 +456,112 @@ result.controlDf  # year, opinion, auditor, hasWeakness
 | `corpName` | `str \| None` | 기업명 |
 | `nYears` | `int` | 연도 수 |
 | `controlDf` | `pl.DataFrame \| None` | 내부통제 평가 시계열 |
+
+---
+
+## finance.affiliateGroup
+
+계열회사 현황 — 기업집단명, 상장/비상장 계열사 목록.
+
+```python
+result = company.affiliateGroup()
+result.groupName     # "삼성"
+result.affiliateDf   # name | listed
+```
+
+| 속성 | 타입 | 설명 |
+|------|------|------|
+| `corpName` | `str \| None` | 기업명 |
+| `nYears` | `int` | 연도 수 |
+| `groupName` | `str \| None` | 기업집단명 |
+| `listedCount` | `int \| None` | 상장 계열사 수 |
+| `unlistedCount` | `int \| None` | 비상장 계열사 수 |
+| `totalCount` | `int \| None` | 총 계열사 수 |
+| `affiliates` | `list[dict]` | 계열사 목록 [{name, listed}] |
+| `affiliateDf` | `pl.DataFrame \| None` | 계열사 DataFrame |
+
+---
+
+## finance.fundraising
+
+증자(감자) 현황 — 발행일자, 형태, 종류, 수량, 발행가.
+
+```python
+result = company.fundraising()
+result.issuanceDf  # date | issueType | stockType | quantity | parValue | issuePrice | note
+```
+
+| 속성 | 타입 | 설명 |
+|------|------|------|
+| `corpName` | `str \| None` | 기업명 |
+| `nYears` | `int` | 연도 수 |
+| `issuances` | `list[dict]` | 발행 이력 |
+| `noData` | `bool` | 발행 실적 없음 여부 |
+| `issuanceDf` | `pl.DataFrame \| None` | 발행 이력 DataFrame |
+
+---
+
+## finance.salesOrder
+
+매출실적(부문/제품별) + 수주상황.
+
+```python
+result = company.salesOrder()
+result.salesDf  # label | v1 | v2 | v3
+result.orderDf  # 수주상황 DataFrame
+```
+
+| 속성 | 타입 | 설명 |
+|------|------|------|
+| `corpName` | `str \| None` | 기업명 |
+| `nYears` | `int` | 연도 수 |
+| `unit` | `str` | 단위 (억원, 백만원 등) |
+| `sales` | `list[dict]` | 매출실적 [{label, values}] |
+| `orders` | `list[dict]` | 수주상황 [{label, values}] |
+| `noData` | `bool` | 해당사항 없음 |
+| `salesDf` | `pl.DataFrame \| None` | 매출실적 DataFrame |
+| `orderDf` | `pl.DataFrame \| None` | 수주상황 DataFrame |
+
+---
+
+## finance.productService
+
+주요 제품 및 서비스 현황 — 매출액, 비중.
+
+```python
+result = company.productService()
+result.productDf  # label | amount | ratio
+```
+
+| 속성 | 타입 | 설명 |
+|------|------|------|
+| `corpName` | `str \| None` | 기업명 |
+| `nYears` | `int` | 연도 수 |
+| `unit` | `str` | 단위 |
+| `products` | `list[dict]` | 제품 목록 [{label, amount, ratio}] |
+| `noData` | `bool` | 해당사항 없음 |
+| `productDf` | `pl.DataFrame \| None` | 제품 DataFrame |
+
+---
+
+## finance.riskDerivative
+
+위험관리 및 파생거래 — 환율 민감도, 파생상품 계약 현황.
+
+```python
+result = company.riskDerivative()
+result.fxDf          # currency | upImpact | downImpact
+result.derivativeDf  # 파생상품 계약 DataFrame
+```
+
+| 속성 | 타입 | 설명 |
+|------|------|------|
+| `corpName` | `str \| None` | 기업명 |
+| `nYears` | `int` | 연도 수 |
+| `unit` | `str` | 단위 |
+| `fxSensitivity` | `list[dict]` | 환율 민감도 [{currency, upImpact, downImpact}] |
+| `derivatives` | `list[dict]` | 파생상품 [{label, values}] |
+| `noData` | `bool` | 해당사항 없음 |
+| `textOnly` | `bool` | 서술형만 존재 |
+| `fxDf` | `pl.DataFrame \| None` | 환율 민감도 DataFrame |
+| `derivativeDf` | `pl.DataFrame \| None` | 파생상품 DataFrame |
