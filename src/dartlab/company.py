@@ -205,12 +205,18 @@ class Company:
         from dartlab.finance.summary import analyze
         return analyze(self.stockCode, ifrsOnly=ifrsOnly, period=period)
 
-    def statements(self, ifrsOnly: bool = True, period: str = "y"):
-        """연결재무제표 BS·IS·CF 시계열 DataFrame 추출.
+    def statements(
+        self,
+        ifrsOnly: bool = True,
+        period: str = "y",
+        scope: str | None = None,
+    ):
+        """재무제표 BS·IS·CF 시계열 DataFrame 추출.
 
         Args:
             ifrsOnly: True면 K-IFRS 도입(2011~) 이후만.
             period: "y" (연간) | "q" (분기) | "h" (반기).
+            scope: "consolidated" (연결) | "separate" (별도) | None (연결 우선, 별도 fallback).
 
         Returns:
             StatementsResult | None.
@@ -219,7 +225,7 @@ class Company:
             - CF: 현금흐름표 DataFrame
         """
         from dartlab.finance.statements import statements
-        return statements(self.stockCode, ifrsOnly=ifrsOnly, period=period)
+        return statements(self.stockCode, ifrsOnly=ifrsOnly, period=period, scope=scope)
 
     def segments(self, period: str = "y"):
         """연결재무제표 주석 부문별 보고 데이터 추출.
@@ -353,6 +359,19 @@ class Company:
         """
         from dartlab.finance.affiliate import affiliates
         return affiliates(self.stockCode, period=period)
+
+    def tangibleAsset(self):
+        """유형자산 변동표 추출 (연결재무제표 주석).
+
+        Returns:
+            TangibleAssetResult | None.
+            - reliability: "high" (합계 컬럼 있음) | "low" (합계 없음)
+            - warnings: 신뢰도 관련 경고 메시지 리스트
+            - movements: {연도: [TangibleMovement]} 당기/전기 변동표
+            - movementDf: 카테고리별 기초/기말 시계열 DataFrame
+        """
+        from dartlab.finance.tangibleAsset import tangibleAsset
+        return tangibleAsset(self.stockCode)
 
     # ── 공시 서술 (disclosure) ──
 

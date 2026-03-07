@@ -1,11 +1,11 @@
-"""연결재무제표 기반 재무제표 추출 파이프라인."""
+"""재무제표 추출 파이프라인. 연결 우선, 별도 fallback."""
 
 import polars as pl
 
 from dartlab.core.dataLoader import PERIOD_KINDS, loadData, extractCorpName
 from dartlab.core.reportSelector import selectReport, parsePeriodKey
 from dartlab.core.tableParser import extractAccounts
-from dartlab.finance.statements.extractor import extractConsolidatedContent, splitStatements
+from dartlab.finance.statements.extractor import extractContent, splitStatements
 from dartlab.finance.statements.types import StatementsResult
 
 
@@ -13,13 +13,18 @@ def statements(
     stockCode: str,
     ifrsOnly: bool = True,
     period: str = "y",
+    scope: str | None = None,
 ) -> StatementsResult | None:
-    """연결재무제표에서 BS, IS, CF 시계열 DataFrame 추출.
+    """재무제표에서 BS, IS, CF 시계열 DataFrame 추출.
 
     Args:
         stockCode: 종목코드 (6자리)
         ifrsOnly: True면 K-IFRS 이후(2011~)만
         period: "y" | "q" | "h"
+        scope: 재무제표 종류 지정
+            None — 연결 우선, 별도 fallback (기본)
+            "consolidated" — 연결만
+            "separate" — 별도만
 
     Returns:
         StatementsResult 또는 데이터 부족 시 None
@@ -34,6 +39,7 @@ def statements(
     bsData: dict[str, tuple[dict, list]] = {}
     isData: dict[str, tuple[dict, list]] = {}
     cfData: dict[str, tuple[dict, list]] = {}
+    scopes: set[str] = set()
 
     for year in years:
         for kind in kinds:
@@ -41,10 +47,11 @@ def statements(
             if report is None:
                 continue
 
-            content = extractConsolidatedContent(report)
+            content, contentScope = extractContent(report, scope=scope)
             if content is None:
                 continue
 
+            scopes.add(contentScope)
             parts = splitStatements(content)
 
             if period == "y":
@@ -74,9 +81,12 @@ def statements(
 
     allKeys = sorted(set(bsData) | set(isData) | set(cfData), reverse=True)
 
+    resultScope = "consolidated" if "consolidated" in scopes else "separate"
+
     return StatementsResult(
         corpName=corpName,
         period=period,
+        scope=resultScope,
         nYears=len(allKeys),
         BS=_buildDf(allKeys, bsData),
         IS=_buildDf(allKeys, isData),

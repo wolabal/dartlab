@@ -12,6 +12,7 @@ from dartlab.finance import (
     statements,
     subsidiary,
     summary,
+    tangibleAsset,
 )
 
 __all__ = [
@@ -26,4 +27,5 @@ __all__ = [
     "statements",
     "subsidiary",
     "summary",
+    "tangibleAsset",
 ]
