@@ -375,6 +375,123 @@ class Company:
         from dartlab.finance.notesDetail import notesDetail
         return notesDetail(self.stockCode, keyword=keyword, period=period)
 
+    def audit(self):
+        """감사의견 + 감사보수 시계열 추출.
+
+        Returns:
+            AuditResult | None.
+            - opinionDf: 감사의견 시계열 DataFrame
+              (year, auditor, opinion, keyAuditMatters)
+            - feeDf: 감사보수 시계열 DataFrame
+              (year, auditor, contractFee, contractHours, actualFee, actualHours)
+        """
+        from dartlab.finance.audit import audit
+        return audit(self.stockCode)
+
+    def executive(self):
+        """임원 현황 시계열 추출 (등기임원 집계 + 미등기임원 보수).
+
+        Returns:
+            ExecutiveResult | None.
+            - executiveDf: 등기임원 집계 시계열 DataFrame
+              (year, totalRegistered, insideDirectors, outsideDirectors,
+               otherNonexec, fullTimeCount, partTimeCount, maleCount, femaleCount)
+            - unregPayDf: 미등기임원 보수 시계열 DataFrame
+              (year, headcount, totalSalary, avgSalary)
+        """
+        from dartlab.finance.executive import executive
+        return executive(self.stockCode)
+
+    def executivePay(self):
+        """임원 보수 시계열 추출 (유형별 + 5억 초과 개인별).
+
+        Returns:
+            ExecutivePayResult | None.
+            - payByTypeDf: 유형별 보수 시계열 DataFrame
+              (year, category, headcount, totalPay, avgPay)
+            - topPayDf: 5억 초과 개인별 보수 DataFrame
+              (year, name, position, totalPay)
+        """
+        from dartlab.finance.executivePay import executivePay
+        return executivePay(self.stockCode)
+
+    def boardOfDirectors(self):
+        """이사회 시계열 추출 (이사 수, 개최횟수, 출석률, 위원회).
+
+        Returns:
+            BoardResult | None.
+            - boardDf: 이사회 시계열 DataFrame
+              (year, totalDirectors, outsideDirectors, meetingCount, avgAttendanceRate)
+            - committeeDf: 위원회 구성 DataFrame
+              (year, committeeName, composition, members)
+        """
+        from dartlab.finance.boardOfDirectors import boardOfDirectors
+        return boardOfDirectors(self.stockCode)
+
+    def capitalChange(self):
+        """자본금 변동·주식 총수·자기주식 시계열 추출.
+
+        Returns:
+            CapitalChangeResult | None.
+            - capitalDf: 자본금 변동 시계열 (보통주/우선주 발행주식·액면·자본금)
+            - shareTotalDf: 주식 총수 시계열 (수권·발행·감소·유통주식)
+            - treasuryDf: 자기주식 변동 시계열 (기초·기말)
+        """
+        from dartlab.finance.capitalChange import capitalChange
+        return capitalChange(self.stockCode)
+
+    def contingentLiability(self):
+        """우발부채·채무보증·소송 시계열 추출.
+
+        Returns:
+            ContingentLiabilityResult | None.
+            - guaranteeDf: 채무보증 시계열 (year, totalGuaranteeAmount, lineCount)
+            - lawsuitDf: 소송 현황 (year, filingDate, parties, amount, status)
+        """
+        from dartlab.finance.contingentLiability import contingentLiability
+        return contingentLiability(self.stockCode)
+
+    def internalControl(self):
+        """내부회계관리제도 시계열 추출.
+
+        Returns:
+            InternalControlResult | None.
+            - controlDf: 내부통제 시계열 (year, period, opinion, auditor, hasWeakness)
+        """
+        from dartlab.finance.internalControl import internalControl
+        return internalControl(self.stockCode)
+
+    def relatedPartyTx(self):
+        """대주주 등과의 거래 시계열 추출.
+
+        Returns:
+            RelatedPartyTxResult | None.
+            - guaranteeDf: 대주주 채무보증 (year, entity, amount)
+            - revenueTxDf: 매출입 거래 (year, entity, sales, purchases)
+        """
+        from dartlab.finance.relatedPartyTx import relatedPartyTx
+        return relatedPartyTx(self.stockCode)
+
+    def rnd(self):
+        """연구개발비 시계열 추출.
+
+        Returns:
+            RndResult | None.
+            - rndDf: R&D 비용 시계열 (year, rndExpense, revenueRatio)
+        """
+        from dartlab.finance.rnd import rnd
+        return rnd(self.stockCode)
+
+    def sanction(self):
+        """제재 현황 시계열 추출.
+
+        Returns:
+            SanctionResult | None.
+            - sanctionDf: 제재 현황 (year, date, agency, action, amount, reason)
+        """
+        from dartlab.finance.sanction import sanction
+        return sanction(self.stockCode)
+
     def tangibleAsset(self):
         """유형자산 변동표 추출 (연결재무제표 주석).
 

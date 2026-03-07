@@ -159,6 +159,76 @@ result.crossCheck   # 교차 검증 결과
 
 ---
 
+## finance.audit
+
+감사의견 + 감사보수 시계열.
+
+```python
+result = company.audit()
+result.opinionDf   # year, auditor, opinion, keyAuditMatters
+result.feeDf       # year, auditor, contractFee, contractHours, actualFee, actualHours
+```
+
+| 속성 | 타입 | 설명 |
+|------|------|------|
+| `corpName` | `str \| None` | 기업명 |
+| `nYears` | `int` | 연도 수 |
+| `opinionDf` | `pl.DataFrame \| None` | 감사의견 시계열 |
+| `feeDf` | `pl.DataFrame \| None` | 감사보수 시계열 (단위: 백만원) |
+
+---
+
+## finance.executive
+
+임원 현황. 등기임원 집계 + 미등기임원 보수.
+
+```python
+result = company.executive()
+result.executiveDf  # year, totalRegistered, insideDirectors, outsideDirectors, ...
+result.unregPayDf   # year, headcount, totalSalary, avgSalary
+```
+
+| 속성 | 타입 | 설명 |
+|------|------|------|
+| `corpName` | `str \| None` | 기업명 |
+| `nYears` | `int` | 연도 수 |
+| `executiveDf` | `pl.DataFrame \| None` | 등기임원 집계 시계열 |
+| `unregPayDf` | `pl.DataFrame \| None` | 미등기임원 보수 시계열 |
+
+### executiveDf 컬럼
+
+| 컬럼 | 설명 |
+|------|------|
+| `totalRegistered` | 등기임원 총 수 |
+| `insideDirectors` | 사내이사 |
+| `outsideDirectors` | 사외이사 |
+| `otherNonexec` | 기타비상무이사 |
+| `fullTimeCount` | 상근 |
+| `partTimeCount` | 비상근 |
+| `maleCount` | 남성 |
+| `femaleCount` | 여성 |
+
+---
+
+## finance.executivePay
+
+임원 보수. 유형별(등기이사/사외이사/감사위원) + 5억 초과 개인별.
+
+```python
+result = company.executivePay()
+result.payByTypeDf  # year, category, headcount, totalPay, avgPay
+result.topPayDf     # year, name, position, totalPay
+```
+
+| 속성 | 타입 | 설명 |
+|------|------|------|
+| `corpName` | `str \| None` | 기업명 |
+| `nYears` | `int` | 연도 수 |
+| `payByTypeDf` | `pl.DataFrame \| None` | 유형별 보수 시계열 |
+| `topPayDf` | `pl.DataFrame \| None` | 5억 초과 개인별 보수 |
+
+---
+
 ## finance.tangibleAsset
 
 유형자산 변동표. 토지, 건물, 기계장치 등 카테고리별 취득/처분/감가상각.
@@ -255,3 +325,134 @@ result.overview    # 사업 개요 텍스트
 | `text` | `str` | 본문 텍스트 |
 | `textLines` | `int` | 텍스트 줄 수 |
 | `tableLines` | `int` | 테이블 줄 수 |
+
+---
+
+## finance.boardOfDirectors
+
+이사회 구성, 개최 횟수, 출석률, 위원회 구성.
+
+```python
+result = company.boardOfDirectors()
+result.boardDf      # year, totalDirectors, outsideDirectors, meetingCount, avgAttendanceRate
+result.committeeDf  # year, committeeName, composition, members
+```
+
+| 속성 | 타입 | 설명 |
+|------|------|------|
+| `corpName` | `str \| None` | 기업명 |
+| `nYears` | `int` | 연도 수 |
+| `boardDf` | `pl.DataFrame \| None` | 이사회 시계열 |
+| `committeeDf` | `pl.DataFrame \| None` | 위원회 구성 |
+
+---
+
+## finance.capitalChange
+
+자본금 변동, 주식의 총수, 자기주식 변동.
+
+```python
+result = company.capitalChange()
+result.capitalDf     # year, commonShares, preferredShares, commonParValue, ...
+result.shareTotalDf  # year, authorizedCommon, issuedCommon, outstandingCommon, ...
+result.treasuryDf    # year, totalBegin, totalEnd
+```
+
+| 속성 | 타입 | 설명 |
+|------|------|------|
+| `corpName` | `str \| None` | 기업명 |
+| `nYears` | `int` | 연도 수 |
+| `capitalDf` | `pl.DataFrame \| None` | 자본금 변동 시계열 |
+| `shareTotalDf` | `pl.DataFrame \| None` | 주식의 총수 시계열 |
+| `treasuryDf` | `pl.DataFrame \| None` | 자기주식 변동 시계열 |
+
+---
+
+## finance.contingentLiability
+
+우발부채·채무보증·소송 현황.
+
+```python
+result = company.contingentLiability()
+result.guaranteeDf  # year, totalGuaranteeAmount, lineCount
+result.lawsuitDf    # year, filingDate, parties, description, amount, amountValue, status
+```
+
+| 속성 | 타입 | 설명 |
+|------|------|------|
+| `corpName` | `str \| None` | 기업명 |
+| `nYears` | `int` | 연도 수 |
+| `guaranteeDf` | `pl.DataFrame \| None` | 채무보증 시계열 |
+| `lawsuitDf` | `pl.DataFrame \| None` | 소송 현황 |
+
+---
+
+## finance.relatedPartyTx
+
+대주주 등과의 거래내용. 채무보증, 매출입 거래.
+
+```python
+result = company.relatedPartyTx()
+result.guaranteeDf  # year, entity, relationship, amount
+result.assetTxDf    # year, entity, txType, amount
+result.revenueTxDf  # year, entity, sales, purchases
+```
+
+| 속성 | 타입 | 설명 |
+|------|------|------|
+| `corpName` | `str \| None` | 기업명 |
+| `nYears` | `int` | 연도 수 |
+| `guaranteeDf` | `pl.DataFrame \| None` | 채무보증 시계열 |
+| `assetTxDf` | `pl.DataFrame \| None` | 자산 거래 시계열 |
+| `revenueTxDf` | `pl.DataFrame \| None` | 매출입 거래 시계열 |
+
+---
+
+## finance.sanction
+
+제재·처벌 현황.
+
+```python
+result = company.sanction()
+result.sanctionDf  # year, date, agency, subject, action, amount, reason
+```
+
+| 속성 | 타입 | 설명 |
+|------|------|------|
+| `corpName` | `str \| None` | 기업명 |
+| `nYears` | `int` | 연도 수 |
+| `sanctionDf` | `pl.DataFrame \| None` | 제재 현황 |
+
+---
+
+## finance.rnd
+
+연구개발비용과 매출액 대비 비율.
+
+```python
+result = company.rnd()
+result.rndDf  # year, rndExpense, revenueRatio
+```
+
+| 속성 | 타입 | 설명 |
+|------|------|------|
+| `corpName` | `str \| None` | 기업명 |
+| `nYears` | `int` | 연도 수 |
+| `rndDf` | `pl.DataFrame \| None` | R&D 비용 시계열 |
+
+---
+
+## finance.internalControl
+
+내부회계관리제도 운영 실태 평가.
+
+```python
+result = company.internalControl()
+result.controlDf  # year, opinion, auditor, hasWeakness
+```
+
+| 속성 | 타입 | 설명 |
+|------|------|------|
+| `corpName` | `str \| None` | 기업명 |
+| `nYears` | `int` | 연도 수 |
+| `controlDf` | `pl.DataFrame \| None` | 내부통제 평가 시계열 |
