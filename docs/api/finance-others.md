@@ -565,3 +565,148 @@ result.derivativeDf  # 파생상품 계약 DataFrame
 | `textOnly` | `bool` | 서술형만 존재 |
 | `fxDf` | `pl.DataFrame \| None` | 환율 민감도 DataFrame |
 | `derivativeDf` | `pl.DataFrame \| None` | 파생상품 DataFrame |
+
+---
+
+## finance.articlesOfIncorporation
+
+정관에 관한 사항 — 정관 변경 이력, 사업목적 현황.
+
+```python
+result = company.articlesOfIncorporation()
+result.changesDf     # date | meetingName | changes | reason
+result.purposesDf    # purpose | active
+```
+
+| 속성 | 타입 | 설명 |
+|------|------|------|
+| `corpName` | `str \| None` | 기업명 |
+| `nYears` | `int` | 연도 수 |
+| `changes` | `list[dict]` | 정관 변경 이력 `[{date, meetingName, changes, reason}]` |
+| `purposes` | `list[dict]` | 사업목적 `[{purpose, active}]` |
+| `noData` | `bool` | 해당사항 없음 여부 |
+| `changesDf` | `pl.DataFrame \| None` | 변경 이력 DataFrame |
+| `purposesDf` | `pl.DataFrame \| None` | 사업목적 DataFrame |
+
+---
+
+## finance.otherFinance
+
+기타 재무에 관한 사항 — 대손충당금, 재고자산 현황.
+
+```python
+result = company.otherFinance()
+result.badDebtDf     # account | period | totalDebt | provision
+result.inventoryDf   # item | values
+```
+
+| 속성 | 타입 | 설명 |
+|------|------|------|
+| `corpName` | `str \| None` | 기업명 |
+| `nYears` | `int` | 연도 수 |
+| `badDebt` | `list[dict]` | 대손충당금 `[{account, period, totalDebt, provision}]` |
+| `inventory` | `list[dict]` | 재고자산 `[{item, values}]` |
+| `noData` | `bool` | 해당사항 없음 여부 |
+| `badDebtDf` | `pl.DataFrame \| None` | 대손충당금 DataFrame |
+| `inventoryDf` | `pl.DataFrame \| None` | 재고자산 DataFrame |
+
+---
+
+## finance.companyHistory
+
+회사의 연혁 — 연혁 이벤트 시계열.
+
+```python
+result = company.companyHistory()
+result.eventsDf      # date | event
+```
+
+| 속성 | 타입 | 설명 |
+|------|------|------|
+| `corpName` | `str \| None` | 기업명 |
+| `nYears` | `int` | 연도 수 |
+| `events` | `list[dict]` | 연혁 이벤트 `[{date, event}]` |
+| `eventsDf` | `pl.DataFrame \| None` | 연혁 DataFrame |
+
+---
+
+## finance.shareholderMeeting
+
+주주총회 등에 관한 사항 — 안건, 결의 결과.
+
+```python
+result = company.shareholderMeeting()
+result.agendaDf      # agenda | result
+```
+
+| 속성 | 타입 | 설명 |
+|------|------|------|
+| `corpName` | `str \| None` | 기업명 |
+| `nYears` | `int` | 연도 수 |
+| `agendas` | `list[dict]` | 안건 `[{agenda, result}]` |
+| `textOnly` | `bool` | 테이블 없이 텍스트만 존재 |
+| `agendaDf` | `pl.DataFrame \| None` | 안건 DataFrame |
+
+---
+
+## finance.auditSystem
+
+감사제도에 관한 사항 — 감사위원회 구성, 감사활동 내역.
+
+```python
+result = company.auditSystem()
+result.committeeDf   # name | role | detail
+result.activityDf    # date | agenda | result
+```
+
+| 속성 | 타입 | 설명 |
+|------|------|------|
+| `corpName` | `str \| None` | 기업명 |
+| `nYears` | `int` | 연도 수 |
+| `committee` | `list[dict]` | 감사위원 `[{name, role, detail}]` |
+| `activity` | `list[dict]` | 감사활동 `[{date, agenda, result}]` |
+| `textOnly` | `bool` | 테이블 없이 텍스트만 존재 |
+| `committeeDf` | `pl.DataFrame \| None` | 감사위원 DataFrame |
+| `activityDf` | `pl.DataFrame \| None` | 감사활동 DataFrame |
+
+---
+
+## finance.investmentInOther
+
+타법인출자 현황 — 투자법인 목록, 지분율, 장부가.
+
+```python
+result = company.investmentInOther()
+result.investmentDf  # name | v1 | v2 | ...
+```
+
+| 속성 | 타입 | 설명 |
+|------|------|------|
+| `corpName` | `str \| None` | 기업명 |
+| `nYears` | `int` | 연도 수 |
+| `investments` | `list[dict]` | 투자법인 `[{name, values}]` |
+| `noData` | `bool` | 해당사항 없음 여부 |
+| `investmentDf` | `pl.DataFrame \| None` | 투자 DataFrame |
+
+---
+
+## finance.companyOverviewDetail
+
+회사의 개요 — 설립일, 상장일, 대표이사, 본점소재지.
+
+```python
+result = company.companyOverviewDetail()
+result.foundedDate   # "1969년 01월 13일"
+result.ceo           # "한종희"
+```
+
+| 속성 | 타입 | 설명 |
+|------|------|------|
+| `corpName` | `str \| None` | 기업명 |
+| `nYears` | `int` | 연도 수 |
+| `foundedDate` | `str \| None` | 설립일 |
+| `listedDate` | `str \| None` | 상장일 |
+| `address` | `str \| None` | 본점소재지 |
+| `ceo` | `str \| None` | 대표이사 |
+| `mainBusiness` | `str \| None` | 주요사업 |
+| `website` | `str \| None` | 홈페이지 |

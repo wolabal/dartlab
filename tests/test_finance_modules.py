@@ -241,3 +241,68 @@ class TestRiskDerivative:
         assert r is not None
         assert r.fxDf is not None
         assert isinstance(r.fxDf, pl.DataFrame)
+
+
+@requires_samsung
+class TestArticlesOfIncorporation:
+    def test_basic(self):
+        from dartlab.finance.articlesOfIncorporation import articlesOfIncorporation
+        r = articlesOfIncorporation(SAMSUNG)
+        assert r is not None
+        assert r.purposes or r.changes or r.noData
+
+
+@requires_samsung
+class TestOtherFinance:
+    def test_basic(self):
+        from dartlab.finance.otherFinance import otherFinance
+        r = otherFinance(SAMSUNG)
+        assert r is not None
+        assert r.badDebt or r.inventory or r.noData
+
+
+@requires_samsung
+class TestCompanyHistory:
+    def test_basic(self):
+        from dartlab.finance.companyHistory import companyHistory
+        r = companyHistory(SAMSUNG)
+        assert r is not None
+        assert r.events
+        assert r.eventsDf is not None
+        assert isinstance(r.eventsDf, pl.DataFrame)
+
+
+@requires_samsung
+class TestShareholderMeeting:
+    def test_basic(self):
+        from dartlab.finance.shareholderMeeting import shareholderMeeting
+        r = shareholderMeeting(SAMSUNG)
+        assert r is not None
+        assert r.agendas or r.textOnly
+
+
+@requires_samsung
+class TestAuditSystem:
+    def test_basic(self):
+        from dartlab.finance.auditSystem import auditSystem
+        r = auditSystem(SAMSUNG)
+        assert r is not None
+        assert r.committee or r.activity or r.textOnly
+
+
+@requires_samsung
+class TestInvestmentInOther:
+    def test_basic(self):
+        from dartlab.finance.investmentInOther import investmentInOther
+        r = investmentInOther(SAMSUNG)
+        assert r is not None
+        assert r.investments or r.noData
+
+
+@requires_samsung
+class TestCompanyOverviewDetail:
+    def test_basic(self):
+        from dartlab.finance.companyOverviewDetail import companyOverviewDetail
+        r = companyOverviewDetail(SAMSUNG)
+        assert r is not None
+        assert r.corpName is not None

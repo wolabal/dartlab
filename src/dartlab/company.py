@@ -437,6 +437,85 @@ class Company:
         from dartlab.finance.riskDerivative import riskDerivative
         return riskDerivative(self.stockCode)
 
+    def articlesOfIncorporation(self):
+        """정관에 관한 사항 추출.
+
+        Returns:
+            ArticlesResult | None.
+            - changes: 정관 변경 이력 [{date, meetingName, changes, reason}]
+            - purposes: 사업목적 현황 [{purpose, active}]
+            - changesDf/purposesDf: DataFrame
+        """
+        from dartlab.finance.articlesOfIncorporation import articlesOfIncorporation
+        return articlesOfIncorporation(self.stockCode)
+
+    def otherFinance(self):
+        """기타 재무에 관한 사항 추출.
+
+        Returns:
+            OtherFinanceResult | None.
+            - badDebt: 대손충당금 [{account, period, totalDebt, provision}]
+            - inventory: 재고자산 [{item, values}]
+            - badDebtDf/inventoryDf: DataFrame
+        """
+        from dartlab.finance.otherFinance import otherFinance
+        return otherFinance(self.stockCode)
+
+    def companyHistory(self):
+        """회사의 연혁 추출.
+
+        Returns:
+            CompanyHistoryResult | None.
+            - events: 연혁 이벤트 [{date, event}]
+            - eventsDf: DataFrame
+        """
+        from dartlab.finance.companyHistory import companyHistory
+        return companyHistory(self.stockCode)
+
+    def shareholderMeeting(self):
+        """주주총회 등에 관한 사항 추출.
+
+        Returns:
+            ShareholderMeetingResult | None.
+            - agendas: 안건 [{agenda, result}]
+            - agendaDf: DataFrame
+        """
+        from dartlab.finance.shareholderMeeting import shareholderMeeting
+        return shareholderMeeting(self.stockCode)
+
+    def auditSystem(self):
+        """감사제도에 관한 사항 추출.
+
+        Returns:
+            AuditSystemResult | None.
+            - committee: 감사위원 [{name, role, detail}]
+            - activity: 감사활동 [{date, agenda, result}]
+            - committeeDf/activityDf: DataFrame
+        """
+        from dartlab.finance.auditSystem import auditSystem
+        return auditSystem(self.stockCode)
+
+    def investmentInOther(self):
+        """타법인출자 현황 추출.
+
+        Returns:
+            InvestmentInOtherResult | None.
+            - investments: 투자법인 [{name, values}]
+            - investmentDf: DataFrame
+        """
+        from dartlab.finance.investmentInOther import investmentInOther
+        return investmentInOther(self.stockCode)
+
+    def companyOverviewDetail(self):
+        """회사의 개요 상세 추출.
+
+        Returns:
+            CompanyOverviewDetailResult | None.
+            - foundedDate, listedDate, address, ceo, mainBusiness, website
+        """
+        from dartlab.finance.companyOverviewDetail import companyOverviewDetail
+        return companyOverviewDetail(self.stockCode)
+
     def audit(self):
         """감사의견 + 감사보수 시계열 추출.
 
