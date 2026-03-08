@@ -144,8 +144,6 @@
 	</div>
 {:else}
 	<div class="blog-post-layout">
-		<div class="blog-spacer"></div>
-
 		<div class="blog-post-col">
 			<header class="post-header">
 				{#if postInfo?.thumbnail}
@@ -219,14 +217,12 @@
 
 	.blog-post-layout {
 		display: grid;
-		grid-template-columns: 200px 1fr 200px;
+		grid-template-columns: 1fr 200px;
 		gap: 0;
 		max-width: 1280px;
 		margin: 0 auto;
 		padding: 0 1.5rem;
 	}
-
-	.blog-spacer { }
 
 	.blog-post-col {
 		min-width: 0;
@@ -487,7 +483,6 @@
 			grid-template-columns: 1fr;
 			padding: 0 1rem;
 		}
-		.blog-spacer { display: none; }
 		.blog-toc { display: none; }
 		.blog-post-col { padding: 0; }
 	}

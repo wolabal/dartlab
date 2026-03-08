@@ -18,7 +18,6 @@
 				<a href="{base}/blog/" class="dl-blog-link">Blog</a>
 			</div>
 			<div class="dl-blog-header-right">
-				<a href="{base}/docs/changelog" class="dl-blog-nav-link">Changelog</a>
 				<a href="https://github.com/eddmpython/dartlab" target="_blank" rel="noopener" class="dl-blog-icon-link">
 					<Github size={18} />
 				</a>
@@ -101,15 +100,6 @@
 		align-items: center;
 		gap: 0.5rem;
 	}
-
-	.dl-blog-nav-link {
-		color: #94a3b8;
-		text-decoration: none;
-		font-size: 0.85rem;
-		font-weight: 500;
-		transition: color 0.15s;
-	}
-	.dl-blog-nav-link:hover { color: #f1f5f9; }
 
 	.dl-blog-icon-link {
 		color: #64748b;

@@ -8,11 +8,19 @@ export interface PostMeta {
 
 export const posts: PostMeta[] = [
 	{
+		slug: 'opendart-review',
+		title: 'OpenDART, 솔직한 리뷰',
+		date: '2026-03-08',
+		description:
+			'OpenDART는 세계적으로도 드문 무료 전자공시 API다. DART의 역사, XBRL 도입 과정, 좋은 점과 불편한 점, 그리고 앞으로의 기대까지 솔직하게 정리한다.',
+		thumbnail: '/avatar-chart.png'
+	},
+	{
 		slug: 'everything-about-dart',
 		title: 'DART의 모든 것',
 		date: '2026-03-08',
 		description:
-			'DART 전자공시시스템이란 무엇인가 — 운영 주체, 공시 종류, 문서 구조, K-IFRS 재무제표, 자동화의 필요성까지.',
+			'DART 전자공시시스템이란 무엇인가 — 사업보고서 12개 섹션, 주석 40개 항목, Open API의 한계까지 한 번에 정리한다.',
 		thumbnail: '/avatar-study.png'
 	}
 ];
