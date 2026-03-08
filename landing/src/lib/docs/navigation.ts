@@ -6,11 +6,11 @@ export interface NavItem {
 
 export const navigation: NavItem[] = [
 	{
-		title: '시작하기',
+		title: 'Getting Started',
 		href: '/docs/getting-started',
 		items: [
-			{ title: '빠른 시작', href: '/docs/getting-started/quickstart' },
-			{ title: '설치', href: '/docs/getting-started/installation' }
+			{ title: 'Quickstart', href: '/docs/getting-started/quickstart' },
+			{ title: 'Installation', href: '/docs/getting-started/installation' }
 		]
 	},
 	{
@@ -20,11 +20,21 @@ export const navigation: NavItem[] = [
 			{ title: 'Overview', href: '/docs/api/overview' },
 			{ title: 'finance.summary', href: '/docs/api/finance-summary' },
 			{ title: 'finance.statements', href: '/docs/api/finance-statements' },
-			{ title: '기타 모듈', href: '/docs/api/finance-others' }
+			{ title: 'Other Modules', href: '/docs/api/finance-others' }
 		]
 	},
 	{
-		title: '사용 가이드',
+		title: 'Tutorials',
+		href: '/docs/tutorials',
+		items: [
+			{ title: '1. Quickstart', href: '/docs/tutorials/quickstart' },
+			{ title: '2. Financial Deep Dive', href: '/docs/tutorials/financial' },
+			{ title: '3. Disclosure Text', href: '/docs/tutorials/disclosure' },
+			{ title: '4. Advanced Analysis', href: '/docs/tutorials/advanced' }
+		]
+	},
+	{
+		title: 'User Guide',
 		href: '/docs/user-guide',
 		items: [
 			{ title: 'Bridge Matching', href: '/docs/user-guide/bridge-matching' }

@@ -1,11 +1,25 @@
-import { readFileSync, writeFileSync } from 'fs';
+import { readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const brandPath = resolve(__dirname, '..', 'src', 'lib', 'brand.ts');
+const pyprojectPath = resolve(__dirname, '..', '..', 'pyproject.toml');
 
-const brandSrc = readFileSync(brandPath, 'utf-8');
+const pyproject = readFileSync(pyprojectPath, 'utf-8');
+const versionMatch = pyproject.match(/^version\s*=\s*"([^"]+)"/m);
+if (!versionMatch) { console.error('pyproject.toml version not found'); process.exit(1); }
+const version = versionMatch[1];
+
+let brandSrc = readFileSync(brandPath, 'utf-8');
+const oldVersion = brandSrc.match(/version:\s*'([^']+)'/)?.[1];
+if (oldVersion !== version) {
+	brandSrc = brandSrc.replace(/version:\s*'[^']+'/, `version: '${version}'`);
+	writeFileSync(brandPath, brandSrc);
+	console.log(`  -> brand.ts version: ${oldVersion} -> ${version}`);
+} else {
+	console.log(`  -> brand.ts version: ${version} (unchanged)`);
+}
 const colorBlock = brandSrc.match(/color:\s*\{([^}]+)\}/s)?.[1];
 if (!colorBlock) { console.error('brand.ts color block not found'); process.exit(1); }
 
@@ -49,11 +63,11 @@ const heroSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 200" f
       <stop offset="0%" stop-color="${colors.bgDark}"/>
       <stop offset="100%" stop-color="${colors.bgCard}"/>
     </linearGradient>
-    <linearGradient id="amber" x1="0" y1="0" x2="1" y2="0">
+    <linearGradient id="teal" x1="0" y1="0" x2="1" y2="0">
       <stop offset="0%" stop-color="${colors.primary}"/>
       <stop offset="100%" stop-color="${colors.primaryLight}"/>
     </linearGradient>
-    <linearGradient id="blue" x1="0" y1="0" x2="1" y2="0">
+    <linearGradient id="indigo" x1="0" y1="0" x2="1" y2="0">
       <stop offset="0%" stop-color="${colors.accent}"/>
       <stop offset="100%" stop-color="${colors.accentLight}"/>
     </linearGradient>
@@ -66,32 +80,38 @@ const heroSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 200" f
 
   <rect width="800" height="200" rx="16" fill="url(#bg)"/>
 
-  <rect x="40" y="60" width="3" height="80" rx="1.5" fill="url(#amber)" opacity="0.6"/>
-  <rect x="50" y="45" width="3" height="110" rx="1.5" fill="url(#amber)" opacity="0.4"/>
-  <rect x="60" y="70" width="3" height="60" rx="1.5" fill="url(#blue)" opacity="0.5"/>
-  <rect x="70" y="50" width="3" height="100" rx="1.5" fill="url(#amber)" opacity="0.3"/>
-  <rect x="80" y="65" width="3" height="70" rx="1.5" fill="url(#blue)" opacity="0.4"/>
-  <rect x="90" y="55" width="3" height="90" rx="1.5" fill="url(#amber)" opacity="0.5"/>
-  <rect x="100" y="75" width="3" height="50" rx="1.5" fill="url(#blue)" opacity="0.3"/>
+  <rect x="40" y="60" width="3" height="80" rx="1.5" fill="url(#teal)" opacity="0.6"/>
+  <rect x="50" y="45" width="3" height="110" rx="1.5" fill="url(#teal)" opacity="0.4"/>
+  <rect x="60" y="70" width="3" height="60" rx="1.5" fill="url(#indigo)" opacity="0.5"/>
+  <rect x="70" y="50" width="3" height="100" rx="1.5" fill="url(#teal)" opacity="0.3"/>
+  <rect x="80" y="65" width="3" height="70" rx="1.5" fill="url(#indigo)" opacity="0.4"/>
+  <rect x="90" y="55" width="3" height="90" rx="1.5" fill="url(#teal)" opacity="0.5"/>
+  <rect x="100" y="75" width="3" height="50" rx="1.5" fill="url(#indigo)" opacity="0.3"/>
 
   <text x="140" y="105" font-family="'Inter', 'Segoe UI', system-ui, sans-serif" font-size="56" font-weight="800" fill="url(#textGrad)">DartLab</text>
 
   <line x1="420" y1="70" x2="420" y2="130" stroke="${colors.border}" stroke-width="1"/>
 
-  <text x="445" y="92" font-family="'Inter', 'Segoe UI', system-ui, sans-serif" font-size="18" font-weight="500" fill="${colors.textMuted}">DART 공시 문서를 완벽하게 분석하는</text>
-  <text x="445" y="120" font-family="'Inter', 'Segoe UI', system-ui, sans-serif" font-size="18" font-weight="500" fill="${colors.textMuted}">Python 라이브러리</text>
+  <text x="445" y="92" font-family="'Inter', 'Segoe UI', system-ui, sans-serif" font-size="18" font-weight="500" fill="${colors.textMuted}">Comprehensive DART disclosure</text>
+  <text x="445" y="120" font-family="'Inter', 'Segoe UI', system-ui, sans-serif" font-size="18" font-weight="500" fill="${colors.textMuted}">analysis in Python</text>
 
-  <rect x="640" y="75" width="120" height="28" rx="14" fill="${colors.border}"/>
-  <text x="700" y="94" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="13" font-weight="600" fill="${colors.primary}" text-anchor="middle">숫자 + 텍스트</text>
+  <rect x="640" y="75" width="130" height="28" rx="14" fill="${colors.border}"/>
+  <text x="705" y="94" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="13" font-weight="600" fill="${colors.primary}" text-anchor="middle">Numbers + Text</text>
 
-  <rect x="640" y="110" width="120" height="28" rx="14" fill="${colors.border}"/>
-  <text x="700" y="129" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="13" font-weight="600" fill="${colors.accent}" text-anchor="middle">시계열 정렬</text>
+  <rect x="640" y="110" width="130" height="28" rx="14" fill="${colors.border}"/>
+  <text x="705" y="129" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="13" font-weight="600" fill="${colors.accent}" text-anchor="middle">Time Series</text>
 </svg>
 `;
 
 writeFileSync(resolve(__dirname, '..', 'src', 'app.css'), appCss);
-writeFileSync(resolve(__dirname, '..', '..', 'docs', 'stylesheets', 'theme.css'), mkdocsCss);
-writeFileSync(resolve(__dirname, '..', '..', 'assets', 'hero.svg'), heroSvg);
+
+const mkdocsDir = resolve(__dirname, '..', '..', 'docs', 'stylesheets');
+mkdirSync(mkdocsDir, { recursive: true });
+writeFileSync(resolve(mkdocsDir, 'theme.css'), mkdocsCss);
+
+const assetsDir = resolve(__dirname, '..', '..', 'assets');
+mkdirSync(assetsDir, { recursive: true });
+writeFileSync(resolve(assetsDir, 'hero.svg'), heroSvg);
 
 console.log('Brand synced:');
 console.log('  -> landing/src/app.css');

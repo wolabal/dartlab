@@ -5,7 +5,7 @@
 	let copiedIdx = $state(-1);
 
 	const commands = [
-		{ label: 'uv (권장)', cmd: 'uv add dartlab', highlight: true },
+		{ label: 'uv (recommended)', cmd: 'uv add dartlab', highlight: true },
 		{ label: 'pip', cmd: 'pip install dartlab', highlight: false }
 	];
 
@@ -20,8 +20,8 @@
 	<div class="mx-auto max-w-2xl">
 		<div class="text-center mb-12">
 			<span class="text-xs font-semibold uppercase tracking-widest text-dl-primary mb-3 block">Get Started</span>
-			<h2 class="text-3xl md:text-4xl font-bold text-dl-text mb-4">설치</h2>
-			<p class="text-dl-text-muted text-lg">설치 후 바로 분석을 시작할 수 있다</p>
+			<h2 class="text-3xl md:text-4xl font-bold text-dl-text mb-4">Installation</h2>
+			<p class="text-dl-text-muted text-lg">Start analyzing right after install</p>
 		</div>
 
 		<div class="space-y-4">
@@ -58,10 +58,10 @@
 		</div>
 
 		<Card class="mt-8">
-			<div class="text-xs font-mono text-dl-primary mb-3">자동 다운로드</div>
+			<div class="text-xs font-mono text-dl-primary mb-3">Auto Download</div>
 			<p class="text-sm text-dl-text-muted leading-relaxed mb-4">
-				데이터를 별도로 준비할 필요 없다. 종목코드를 넘기면 로컬에 없는 데이터는
-				<span class="text-dl-text">GitHub Releases에서 자동으로 다운로드</span>한다.
+				No separate data preparation needed. Pass a stock code and missing data is
+				<span class="text-dl-text">automatically downloaded from GitHub Releases</span>.
 			</p>
 			<div class="font-mono text-sm leading-7">
 				<div>
@@ -73,7 +73,7 @@
 				<div class="mt-1">
 					<span class="text-dl-text">c = </span>
 					<span class="text-cyan-400">Company</span><span class="text-dl-text-muted">(</span><span class="text-emerald-400">"005930"</span><span class="text-dl-text-muted">)</span>
-					<span class="text-dl-text-dim">&nbsp;&nbsp;# 없으면 자동 다운로드</span>
+					<span class="text-dl-text-dim">&nbsp;&nbsp;# auto-downloads</span>
 				</div>
 			</div>
 		</Card>

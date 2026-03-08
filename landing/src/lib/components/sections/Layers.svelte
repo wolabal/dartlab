@@ -8,8 +8,8 @@
 	<div class="mx-auto max-w-5xl">
 		<div class="text-center mb-16">
 			<span class="text-xs font-semibold uppercase tracking-widest text-dl-primary mb-3 block">Architecture</span>
-			<h2 class="text-3xl md:text-4xl font-bold text-dl-text mb-4">전자공시를 분석하는 세 가지 레이어</h2>
-			<p class="text-dl-text-muted text-lg">숫자에서 텍스트로, 텍스트에서 인사이트로</p>
+			<h2 class="text-3xl md:text-4xl font-bold text-dl-text mb-4">Three Layers of Disclosure Analysis</h2>
+			<p class="text-dl-text-muted text-lg">From numbers to text, from text to insights</p>
 		</div>
 
 		<div class="grid md:grid-cols-3 gap-6">
@@ -18,26 +18,26 @@
 					<BarChart3 class="w-5 h-5 text-dl-primary" />
 				</div>
 				<div class="text-xs font-mono text-dl-primary mb-2">Layer 1</div>
-				<h3 class="text-lg font-bold text-dl-text mb-2">정량 분석</h3>
+				<h3 class="text-lg font-bold text-dl-text mb-2">Quantitative Analysis</h3>
 				<p class="text-sm text-dl-text-muted leading-relaxed mb-4">
-					Bridge Matching으로 누적 재무제표에서 개별 분기 실적을 역산한다. 14개 모듈, 260+ 상장사.
+					Bridge Matching reverse-calculates individual quarters from cumulative statements. 14 modules, 260+ listed companies.
 				</p>
 				<div class="space-y-2 text-xs text-dl-text-dim">
 					<div class="flex items-center gap-2">
 						<span class="w-1 h-1 rounded-full bg-dl-primary"></span>
-						동일 기업 내 계정명 자동 추적
+						Auto-tracks account name changes
 					</div>
 					<div class="flex items-center gap-2">
 						<span class="w-1 h-1 rounded-full bg-dl-primary"></span>
-						분기 역산 (Q1~Q4)
+						Quarter reverse-calculation (Q1–Q4)
 					</div>
 					<div class="flex items-center gap-2">
 						<span class="w-1 h-1 rounded-full bg-dl-primary"></span>
-						변경점 자동 탐지
+						Breakpoint auto-detection
 					</div>
 				</div>
 				<div class="mt-4 pt-3 border-t border-dl-border">
-					<Badge variant="success">출시됨</Badge>
+					<Badge variant="success">Released</Badge>
 				</div>
 			</Card>
 
@@ -46,26 +46,26 @@
 					<FileText class="w-5 h-5 text-dl-accent" />
 				</div>
 				<div class="text-xs font-mono text-dl-accent mb-2">Layer 2</div>
-				<h3 class="text-lg font-bold text-dl-text mb-2">정성 분석</h3>
+				<h3 class="text-lg font-bold text-dl-text mb-2">Qualitative Analysis</h3>
 				<p class="text-sm text-dl-text-muted leading-relaxed mb-4">
-					별도 프로젝트에서 개발 중인 전문 텍스트 분석 모듈을 DartLab에 통합 배치할 예정이다.
+					Specialized text analysis modules developed separately will be integrated into DartLab as batch releases.
 				</p>
 				<div class="space-y-2 text-xs text-dl-text-dim">
 					<div class="flex items-center gap-2">
 						<span class="w-1 h-1 rounded-full bg-dl-accent"></span>
-						섹션별 텍스트 diff
+						Section-level text diff
 					</div>
 					<div class="flex items-center gap-2">
 						<span class="w-1 h-1 rounded-full bg-dl-accent"></span>
-						위험 요인 추적
+						Risk factor tracking
 					</div>
 					<div class="flex items-center gap-2">
 						<span class="w-1 h-1 rounded-full bg-dl-accent"></span>
-						감사의견 변경 감지
+						Audit opinion change detection
 					</div>
 				</div>
 				<div class="mt-4 pt-3 border-t border-dl-border">
-					<Badge>배치 예정</Badge>
+					<Badge>Planned</Badge>
 				</div>
 			</Card>
 
@@ -74,26 +74,26 @@
 					<Link2 class="w-5 h-5 text-dl-primary" />
 				</div>
 				<div class="text-xs font-mono bg-gradient-to-r from-dl-primary to-dl-accent bg-clip-text text-transparent mb-2">Layer 3</div>
-				<h3 class="text-lg font-bold text-dl-text mb-2">교차 검증</h3>
+				<h3 class="text-lg font-bold text-dl-text mb-2">Cross-validation</h3>
 				<p class="text-sm text-dl-text-muted leading-relaxed mb-4">
-					정량 변동과 정성 변화를 연결하여 리스크 시그널을 자동으로 탐지한다.
+					Links quantitative changes with qualitative shifts to automatically detect risk signals.
 				</p>
 				<div class="space-y-2 text-xs text-dl-text-dim">
 					<div class="flex items-center gap-2">
 						<span class="w-1 h-1 rounded-full bg-dl-primary"></span>
-						실적 변동 ↔ 텍스트 설명
+						Earnings change ↔ text explanation
 					</div>
 					<div class="flex items-center gap-2">
 						<span class="w-1 h-1 rounded-full bg-dl-accent"></span>
-						리스크 시그널 선행 분석
+						Leading risk signal analysis
 					</div>
 					<div class="flex items-center gap-2">
 						<span class="w-1 h-1 rounded-full bg-dl-primary"></span>
-						감사의견 ↔ 신뢰도 판단
+						Audit opinion ↔ reliability assessment
 					</div>
 				</div>
 				<div class="mt-4 pt-3 border-t border-dl-border">
-					<Badge>개발 중</Badge>
+					<Badge>In Development</Badge>
 				</div>
 			</Card>
 		</div>

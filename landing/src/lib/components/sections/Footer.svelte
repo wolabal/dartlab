@@ -4,14 +4,14 @@
 	import { Github, Youtube, Mail } from 'lucide-svelte';
 
 	const footerLinks = {
-		'문서': [
-			{ label: '시작하기', href: `${base}/docs/` },
-			{ label: 'API 레퍼런스', href: `${base}/docs/` }
+		'Docs': [
+			{ label: 'Getting Started', href: `${base}/docs/` },
+			{ label: 'API Reference', href: `${base}/docs/api/overview` }
 		],
-		'프로젝트': [
+		'Project': [
 			{ label: 'GitHub', href: brand.repo },
 			{ label: 'PyPI', href: brand.pypi },
-			{ label: '데이터', href: `${brand.repo}/releases/tag/data-v1` },
+			{ label: 'Data', href: `${brand.repo}/releases/tag/data-v1` },
 			{ label: 'Issues', href: `${brand.repo}/issues` }
 		],
 		'eddmpython': [

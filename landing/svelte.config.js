@@ -33,7 +33,7 @@ const config = {
 			strict: false
 		}),
 		prerender: {
-			entries: ['*']
+			entries: ['*', '/docs/']
 		},
 		paths: {
 			base: process.env.BASE_PATH || ''

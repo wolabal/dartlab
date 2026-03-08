@@ -9,15 +9,15 @@
 			class="p-8 md:p-12 rounded-2xl bg-gradient-to-b from-dl-bg-card to-dl-bg-darker border border-dl-border relative overflow-hidden"
 		>
 			<div
-				class="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(245,158,11,0.05)_0%,_transparent_70%)]"
+				class="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(45,212,191,0.05)_0%,_transparent_70%)]"
 			></div>
 			<div class="relative">
-				<h2 class="text-2xl md:text-3xl font-bold text-dl-text mb-4">전자공시 분석을 시작하세요</h2>
-				<p class="text-dl-text-muted mb-8">숫자 너머의 이야기를 읽어보세요.</p>
+				<h2 class="text-2xl md:text-3xl font-bold text-dl-text mb-4">Start Analyzing DART Disclosures</h2>
+				<p class="text-dl-text-muted mb-8">Read the story beyond the numbers.</p>
 
 				<div class="flex flex-wrap items-center justify-center gap-4">
-					<Button href="#install">설치하기</Button>
-					<Button variant="secondary" href="{base}/docs/">문서 보기 →</Button>
+					<Button href="#install">Install</Button>
+					<Button variant="secondary" href="{base}/docs/">Documentation →</Button>
 				</div>
 			</div>
 		</div>

@@ -5,14 +5,19 @@ const modules = import.meta.glob(
 		'@docs/getting-started/*.md',
 		'@docs/user-guide/*.md',
 		'@docs/api/*.md',
-		'@docs/index.md',
-		'!@docs/**/STATUS.md'
+		'@docs/tutorials/*.md',
+		'!@docs/**/STATUS.md',
+		'!@docs/index.md'
 	],
 	{ eager: true }
 ) as Record<string, { default: ConstructorOfATypedSvelteComponent; metadata?: Record<string, string> }>;
 
 function normalizePath(rawPath: string): string {
-	return rawPath.replace(/^.*?\/docs\//, '').replace(/\.md$/, '').replace(/\/index$/, '');
+	return rawPath
+		.replace(/^.*?\/docs\//, '')
+		.replace(/\/\d+_/g, '/')
+		.replace(/\.md$/, '')
+		.replace(/\/index$/, '');
 }
 
 const slugMap = new Map<string, { component: ConstructorOfATypedSvelteComponent; metadata?: Record<string, string> }>();

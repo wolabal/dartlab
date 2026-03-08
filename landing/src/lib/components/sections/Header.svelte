@@ -21,17 +21,21 @@
 		</a>
 
 		<div class="hidden md:flex items-center gap-1">
-			<a href="{base}/#features"
+			<a href="{base}/docs/getting-started/quickstart"
 				class="px-3 py-2 text-sm text-dl-text-muted hover:text-dl-text transition-colors no-underline rounded-lg hover:bg-white/5">
-				기능
+				Quickstart
 			</a>
-			<a href="{base}/#install"
+			<a href="{base}/docs/tutorials/quickstart"
 				class="px-3 py-2 text-sm text-dl-text-muted hover:text-dl-text transition-colors no-underline rounded-lg hover:bg-white/5">
-				설치
+				Tutorials
 			</a>
-			<a href="{base}/docs/"
+			<a href="{base}/docs/api/overview"
 				class="px-3 py-2 text-sm text-dl-text-muted hover:text-dl-text transition-colors no-underline rounded-lg hover:bg-white/5">
-				문서
+				API
+			</a>
+			<a href="{base}/docs/user-guide/bridge-matching"
+				class="px-3 py-2 text-sm text-dl-text-muted hover:text-dl-text transition-colors no-underline rounded-lg hover:bg-white/5">
+				Guide
 			</a>
 		</div>
 
