@@ -8,6 +8,9 @@
 			{ label: 'Getting Started', href: `${base}/docs/` },
 			{ label: 'API Reference', href: `${base}/docs/api/overview` }
 		],
+		'Blog': [
+			{ label: 'DART의 모든 것', href: `${base}/blog/everything-about-dart` }
+		],
 		'Project': [
 			{ label: 'GitHub', href: brand.repo },
 			{ label: 'PyPI', href: brand.pypi },
@@ -36,7 +39,7 @@
 
 <footer class="bg-dl-bg-darker border-t border-dl-border pt-14 pb-8 px-6">
 	<div class="max-w-6xl mx-auto">
-		<div class="grid grid-cols-1 md:grid-cols-5 gap-8 mb-10">
+		<div class="grid grid-cols-1 md:grid-cols-6 gap-8 mb-10">
 			<div class="md:col-span-1">
 				<div class="flex items-center gap-1.5 mb-3">
 					<img src="{base}/avatar.png" alt="DartLab" width="32" height="32" class="rounded-full" />

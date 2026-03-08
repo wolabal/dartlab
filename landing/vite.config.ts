@@ -7,12 +7,16 @@ export default defineConfig({
 	plugins: [tailwindcss(), sveltekit()],
 	resolve: {
 		alias: {
-			'@docs': path.resolve(__dirname, '..', 'docs')
+			'@docs': path.resolve(__dirname, '..', 'docs'),
+			'@blog': path.resolve(__dirname, '..', 'blog')
 		}
 	},
 	server: {
 		fs: {
-			allow: [path.resolve(__dirname, '..', 'docs')]
+			allow: [
+				path.resolve(__dirname, '..', 'docs'),
+				path.resolve(__dirname, '..', 'blog')
+			]
 		}
 	}
 });

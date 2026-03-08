@@ -37,6 +37,10 @@
 				class="px-3 py-2 text-sm text-dl-text-muted hover:text-dl-text transition-colors no-underline rounded-lg hover:bg-white/5">
 				Guide
 			</a>
+			<a href="{base}/blog/"
+				class="px-3 py-2 text-sm text-dl-text-muted hover:text-dl-text transition-colors no-underline rounded-lg hover:bg-white/5">
+				Blog
+			</a>
 		</div>
 
 		<div class="flex items-center gap-2">

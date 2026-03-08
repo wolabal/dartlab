@@ -1,4 +1,4 @@
-import { writeFileSync, mkdirSync, existsSync } from 'fs';
+import { writeFileSync, readFileSync, mkdirSync, existsSync, copyFileSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -8,11 +8,12 @@ const basePath = process.env.BASE_PATH || '';
 const target = `${basePath}/docs/getting-started/quickstart`;
 
 const docsDir = resolve(buildDir, 'docs');
-const indexPath = resolve(docsDir, 'index.html');
 
-if (!existsSync(indexPath)) {
+// docs/index.html — redirect to quickstart
+const docsIndex = resolve(docsDir, 'index.html');
+if (!existsSync(docsIndex)) {
 	mkdirSync(docsDir, { recursive: true });
-	writeFileSync(indexPath, `<!DOCTYPE html>
+	writeFileSync(docsIndex, `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8">
@@ -26,4 +27,15 @@ if (!existsSync(indexPath)) {
 </html>
 `);
 	console.log(`  -> docs/index.html redirect to ${target}`);
+}
+
+// blog/index.html — copy from blog.html if SvelteKit generated it as blog.html
+const blogHtml = resolve(buildDir, 'blog.html');
+const blogDir = resolve(buildDir, 'blog');
+const blogIndex = resolve(blogDir, 'index.html');
+
+if (existsSync(blogHtml) && !existsSync(blogIndex)) {
+	mkdirSync(blogDir, { recursive: true });
+	copyFileSync(blogHtml, blogIndex);
+	console.log('  -> blog/index.html copied from blog.html');
 }
