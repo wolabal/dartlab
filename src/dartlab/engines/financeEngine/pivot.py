@@ -55,21 +55,11 @@ SNAKE_ALIASES: dict[str, str] = {
 }
 
 
-def buildTimeseries(
+def _loadAndNormalize(
     stockCode: str,
     fsDivPref: str = "CFS",
-) -> Optional[tuple[dict[str, dict[str, list[Optional[float]]]], list[str]]]:
-    """finance parquet → (시계열 dict, periods).
-
-    Args:
-        stockCode: 종목코드 (예: "005930")
-        fsDivPref: "CFS" (연결) 또는 "OFS" (별도). CFS 없으면 OFS fallback.
-
-    Returns:
-        (series, periods) 또는 None.
-        series = {"BS": {"snakeId": [값...]}, "IS": {...}, "CF": {...}}
-        periods = ["2016_Q1", "2016_Q2", ..., "2024_Q4"]
-    """
+) -> Optional[tuple[pl.DataFrame, list[str]]]:
+    """finance parquet → 정규화된 DataFrame + periods (내부용)."""
     from dartlab.core.dataLoader import loadData
 
     df = loadData(stockCode, category="finance")
@@ -87,10 +77,85 @@ def buildTimeseries(
     df = _normalizeQ4(df)
 
     periods = _buildPeriods(df)
+    return df, periods
+
+
+def buildTimeseries(
+    stockCode: str,
+    fsDivPref: str = "CFS",
+) -> Optional[tuple[dict[str, dict[str, list[Optional[float]]]], list[str]]]:
+    """finance parquet → 분기별 standalone 시계열.
+
+    Args:
+        stockCode: 종목코드 (예: "005930")
+        fsDivPref: "CFS" (연결) 또는 "OFS" (별도). CFS 없으면 OFS fallback.
+
+    Returns:
+        (series, periods) 또는 None.
+        series = {"BS": {"snakeId": [값...]}, "IS": {...}, "CF": {...}}
+        periods = ["2016_Q1", "2016_Q2", ..., "2024_Q4"]
+    """
+    result = _loadAndNormalize(stockCode, fsDivPref)
+    if result is None:
+        return None
+
+    df, periods = result
     series = _pivotToSeries(df, periods)
     _mergeAliases(series)
 
     return series, periods
+
+
+def buildAnnual(
+    stockCode: str,
+    fsDivPref: str = "CFS",
+) -> Optional[tuple[dict[str, dict[str, list[Optional[float]]]], list[str]]]:
+    """finance parquet → 연도별 시계열.
+
+    IS/CF: 해당 연도 분기별 standalone 합산.
+    BS: 해당 연도 마지막 분기(Q4 우선) 시점잔액.
+
+    Args:
+        stockCode: 종목코드 (예: "005930")
+        fsDivPref: "CFS" (연결) 또는 "OFS" (별도).
+
+    Returns:
+        (series, years) 또는 None.
+        series = {"BS": {"snakeId": [값...]}, "IS": {...}, "CF": {...}}
+        years = ["2016", "2017", ..., "2024"]
+    """
+    qResult = buildTimeseries(stockCode, fsDivPref)
+    if qResult is None:
+        return None
+
+    qSeries, qPeriods = qResult
+    return _aggregateAnnual(qSeries, qPeriods)
+
+
+def buildCumulative(
+    stockCode: str,
+    fsDivPref: str = "CFS",
+) -> Optional[tuple[dict[str, dict[str, list[Optional[float]]]], list[str]]]:
+    """finance parquet → 분기별 누적 시계열.
+
+    IS/CF: 해당 연도 시작부터 누적합 (Q1, Q1+Q2, Q1+Q2+Q3, Q1+Q2+Q3+Q4).
+    BS: 시점잔액 그대로.
+
+    Args:
+        stockCode: 종목코드 (예: "005930")
+        fsDivPref: "CFS" (연결) 또는 "OFS" (별도).
+
+    Returns:
+        (series, periods) 또는 None.
+        series = {"BS": {"snakeId": [값...]}, "IS": {...}, "CF": {...}}
+        periods = ["2016_Q1", "2016_Q2", ..., "2024_Q4"]
+    """
+    qResult = buildTimeseries(stockCode, fsDivPref)
+    if qResult is None:
+        return None
+
+    qSeries, qPeriods = qResult
+    return _aggregateCumulative(qSeries, qPeriods)
 
 
 def _applyCfsPriority(df: pl.DataFrame, pref: str) -> pl.DataFrame:
@@ -300,3 +365,70 @@ def _mergeAliases(
 
         for k in keysToDelete:
             del series[sjDiv][k]
+
+
+def _aggregateAnnual(
+    qSeries: dict[str, dict[str, list[Optional[float]]]],
+    qPeriods: list[str],
+) -> tuple[dict[str, dict[str, list[Optional[float]]]], list[str]]:
+    """분기별 standalone → 연도별 집계."""
+    yearSet: dict[str, list[int]] = {}
+    for i, p in enumerate(qPeriods):
+        year = p.split("_")[0]
+        yearSet.setdefault(year, []).append(i)
+
+    years = sorted(yearSet.keys())
+    nYears = len(years)
+    yearIdx = {y: i for i, y in enumerate(years)}
+
+    result: dict[str, dict[str, list[Optional[float]]]] = {"BS": {}, "IS": {}, "CF": {}}
+
+    for sjDiv in qSeries:
+        for snakeId, vals in qSeries[sjDiv].items():
+            annual: list[Optional[float]] = [None] * nYears
+
+            for year, qIndices in yearSet.items():
+                yIdx = yearIdx[year]
+
+                if sjDiv == "BS":
+                    lastIdx = max(qIndices)
+                    annual[yIdx] = vals[lastIdx] if lastIdx < len(vals) else None
+                else:
+                    qVals = [vals[qi] for qi in qIndices if qi < len(vals) and vals[qi] is not None]
+                    annual[yIdx] = sum(qVals) if qVals else None
+
+            result[sjDiv][snakeId] = annual
+
+    return result, years
+
+
+def _aggregateCumulative(
+    qSeries: dict[str, dict[str, list[Optional[float]]]],
+    qPeriods: list[str],
+) -> tuple[dict[str, dict[str, list[Optional[float]]]], list[str]]:
+    """분기별 standalone → 분기별 누적."""
+    yearStarts: dict[str, int] = {}
+    for i, p in enumerate(qPeriods):
+        year = p.split("_")[0]
+        if year not in yearStarts:
+            yearStarts[year] = i
+
+    result: dict[str, dict[str, list[Optional[float]]]] = {"BS": {}, "IS": {}, "CF": {}}
+    nPeriods = len(qPeriods)
+
+    for sjDiv in qSeries:
+        for snakeId, vals in qSeries[sjDiv].items():
+            cum: list[Optional[float]] = [None] * nPeriods
+
+            if sjDiv == "BS":
+                cum = list(vals)
+            else:
+                for i, p in enumerate(qPeriods):
+                    year = p.split("_")[0]
+                    startIdx = yearStarts[year]
+                    qVals = [vals[j] for j in range(startIdx, i + 1) if j < len(vals) and vals[j] is not None]
+                    cum[i] = sum(qVals) if qVals else None
+
+            result[sjDiv][snakeId] = cum
+
+    return result, list(qPeriods)

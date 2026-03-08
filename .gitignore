@@ -1,7 +1,7 @@
 # Python-generated files
 __pycache__/
 *.py[oc]
-build/
+/build/
 dist/
 wheels/
 *.egg-info
@@ -19,10 +19,12 @@ data/
 # eddmpython 학습 결과 참조 (로컬 전용, git 미포함)
 _reference/
 
+# Node modules (all locations)
+node_modules/
+
 # Landing page build artifacts
 landing/build/
 landing/.svelte-kit/
-landing/node_modules/
 landing/static/blog/assets/
 
 # MkDocs build

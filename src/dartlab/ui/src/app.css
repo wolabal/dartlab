@@ -1,0 +1,135 @@
+@import "tailwindcss";
+
+@theme {
+	--color-dl-primary: #ea4647;
+	--color-dl-primary-dark: #c83232;
+	--color-dl-primary-light: #f87171;
+	--color-dl-accent: #fb923c;
+	--color-dl-accent-light: #fdba74;
+	--color-dl-bg-dark: #050811;
+	--color-dl-bg-darker: #030509;
+	--color-dl-bg-card: #0f1219;
+	--color-dl-bg-card-hover: #1a1f2b;
+	--color-dl-text: #f1f5f9;
+	--color-dl-text-muted: #94a3b8;
+	--color-dl-text-dim: #64748b;
+	--color-dl-border: #1e2433;
+	--color-dl-success: #34d399;
+	--color-dl-warning: #fbbf24;
+
+	--font-sans: 'Pretendard Variable', 'Inter', ui-sans-serif, system-ui, sans-serif;
+	--font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+}
+
+html, body, #app {
+	height: 100%;
+	background: var(--color-dl-bg-dark);
+	color: var(--color-dl-text);
+	font-family: var(--font-sans);
+	font-size: 14px;
+	line-height: 1.6;
+}
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-dl-border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-dl-text-dim); }
+
+::selection { background: var(--color-dl-primary); color: white; }
+
+@keyframes typing {
+	0%, 60%, 100% { opacity: 0.3; }
+	30% { opacity: 1; }
+}
+
+@keyframes fadeIn {
+	from { opacity: 0; transform: translateY(8px); }
+	to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Input Box (shared across components) ── */
+.input-box {
+	display: flex;
+	align-items: flex-end;
+	gap: 8px;
+	padding: 12px 16px;
+	border-radius: 16px;
+	border: 1px solid var(--color-dl-border);
+	background: var(--color-dl-bg-card);
+	box-shadow: 0 10px 15px -3px rgba(0,0,0,0.2), 0 4px 6px -4px rgba(0,0,0,0.2);
+	transition: border-color 0.2s;
+	width: 100%;
+}
+.input-box:focus-within { border-color: var(--color-dl-text-dim); }
+.input-box.large {
+	padding: 16px 20px;
+	box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3), 0 8px 10px -6px rgba(0,0,0,0.3);
+}
+
+.input-textarea {
+	flex: 1;
+	resize: none;
+	background: transparent;
+	border: none;
+	outline: none;
+	font-size: 15px;
+	line-height: 1.6;
+	color: var(--color-dl-text);
+	font-family: inherit;
+	min-height: 28px;
+	max-height: 200px;
+	padding: 0;
+}
+.input-textarea::placeholder { color: var(--color-dl-text-dim); }
+
+.send-btn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 36px;
+	height: 36px;
+	border-radius: 50%;
+	flex-shrink: 0;
+	border: none;
+	cursor: pointer;
+	transition: all 0.15s;
+	background: var(--color-dl-bg-card-hover);
+	color: var(--color-dl-text-dim);
+	font-family: inherit;
+}
+.send-btn.active { background: var(--color-dl-text); color: var(--color-dl-bg-dark); }
+.send-btn.active:hover { background: var(--color-dl-text-muted); }
+.send-btn:disabled { cursor: not-allowed; opacity: 0.5; }
+
+/* ── Animations ── */
+.animate-fadeIn {
+	animation: fadeIn 0.3s ease-out;
+}
+
+/* ── Markdown prose ── */
+.prose-dartlab h1, .prose-dartlab h2, .prose-dartlab h3 {
+	margin-top: 1.2em; margin-bottom: 0.4em; font-weight: 600; color: var(--color-dl-text);
+}
+.prose-dartlab h1 { font-size: 1.3em; }
+.prose-dartlab h2 { font-size: 1.15em; }
+.prose-dartlab h3 { font-size: 1.05em; }
+.prose-dartlab p { margin-bottom: 0.6em; }
+.prose-dartlab ul, .prose-dartlab ol { padding-left: 1.5em; margin-bottom: 0.6em; }
+.prose-dartlab li { margin-bottom: 0.2em; }
+.prose-dartlab code {
+	background: var(--color-dl-bg-card-hover); padding: 2px 6px; border-radius: 5px;
+	font-size: 0.88em; font-family: var(--font-mono);
+}
+.prose-dartlab pre {
+	background: var(--color-dl-bg-darker, #030509); padding: 16px; border-radius: 12px;
+	overflow-x: auto; margin-bottom: 0.8em; border: 1px solid var(--color-dl-border);
+}
+.prose-dartlab pre code { background: none; padding: 0; }
+.prose-dartlab table { border-collapse: collapse; width: 100%; margin-bottom: 0.8em; font-size: 0.9em; }
+.prose-dartlab th, .prose-dartlab td { border: 1px solid var(--color-dl-border); padding: 8px 12px; text-align: left; }
+.prose-dartlab th { background: var(--color-dl-bg-card-hover); font-weight: 600; }
+.prose-dartlab strong { font-weight: 600; color: var(--color-dl-text); }
+.prose-dartlab blockquote {
+	border-left: 3px solid var(--color-dl-border); padding-left: 14px;
+	color: var(--color-dl-text-muted); margin-bottom: 0.8em;
+}

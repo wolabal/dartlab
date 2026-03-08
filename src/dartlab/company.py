@@ -161,7 +161,7 @@ class Company:
             from dartlab.engines.financeEngine.pivot import buildTimeseries
             ts = buildTimeseries(self.stockCode)
             if ts is not None:
-                self._cache["_financeTs"] = ts
+                self._cache["_finance_q_CFS"] = ts
             else:
                 self._hasFinance = False
 
@@ -507,19 +507,75 @@ class Company:
 
     # ── financeEngine (숫자 재무 데이터) ──
 
-    def _getFinanceTimeseries(self):
-        """finance parquet 분기별 시계열 (캐싱)."""
-        cacheKey = "_financeTs"
+    def _getFinanceBuild(self, period: str = "q", fsDivPref: str = "CFS"):
+        """finance parquet 시계열 빌드 (캐싱).
+
+        Args:
+            period: "q" (분기별 standalone), "y" (연도별), "cum" (분기별 누적).
+            fsDivPref: "CFS" (연결) 또는 "OFS" (별도).
+        """
+        cacheKey = f"_finance_{period}_{fsDivPref}"
         if cacheKey in self._cache:
             return self._cache[cacheKey]
-        from dartlab.engines.financeEngine.pivot import buildTimeseries
-        result = buildTimeseries(self.stockCode)
+
+        from dartlab.engines.financeEngine.pivot import buildTimeseries, buildAnnual, buildCumulative
+
+        builders = {"q": buildTimeseries, "y": buildAnnual, "cum": buildCumulative}
+        builder = builders.get(period, buildTimeseries)
+        result = builder(self.stockCode, fsDivPref=fsDivPref)
+        self._cache[cacheKey] = result
+        return result
+
+    def getTimeseries(self, period: str = "q", fsDivPref: str = "CFS"):
+        """재무 시계열 조회.
+
+        Args:
+            period: "q" (분기별 standalone), "y" (연도별), "cum" (분기별 누적).
+            fsDivPref: "CFS" (연결) 또는 "OFS" (별도).
+
+        Returns:
+            (series, periods) 또는 None.
+            series = {"BS": {"snakeId": [값...]}, "IS": {...}, "CF": {...}}
+            periods = ["2016_Q1", ...] (q/cum) 또는 ["2016", ...] (y)
+
+        Example::
+
+            c = Company("005930")
+            series, periods = c.getTimeseries("y")
+            series, periods = c.getTimeseries("q", fsDivPref="OFS")
+        """
+        return self._getFinanceBuild(period, fsDivPref)
+
+    def getRatios(self, fsDivPref: str = "CFS"):
+        """재무비율 계산.
+
+        Args:
+            fsDivPref: "CFS" (연결) 또는 "OFS" (별도).
+
+        Returns:
+            RatioResult dataclass.
+
+        Example::
+
+            c = Company("005930")
+            c.getRatios().roe
+            c.getRatios("OFS").debtRatio
+        """
+        cacheKey = f"_ratios_{fsDivPref}"
+        if cacheKey in self._cache:
+            return self._cache[cacheKey]
+        from dartlab.engines.financeEngine.ratios import calcRatios
+        ts = self._getFinanceBuild("q", fsDivPref)
+        if ts is None:
+            return None
+        series, _ = ts
+        result = calcRatios(series)
         self._cache[cacheKey] = result
         return result
 
     @property
     def ratios(self):
-        """재무비율 (ROE, ROA, 마진, 부채비율 등).
+        """재무비율 (연결 기준, ROE, ROA, 마진, 부채비율 등).
 
         Returns:
             RatioResult dataclass.
@@ -531,21 +587,11 @@ class Company:
             c.ratios.operatingMargin  # 10.88
             c.ratios.debtRatio      # 27.93
         """
-        cacheKey = "_ratios"
-        if cacheKey in self._cache:
-            return self._cache[cacheKey]
-        from dartlab.engines.financeEngine.ratios import calcRatios
-        ts = self._getFinanceTimeseries()
-        if ts is None:
-            return None
-        series, _ = ts
-        result = calcRatios(series)
-        self._cache[cacheKey] = result
-        return result
+        return self.getRatios("CFS")
 
     @property
     def timeseries(self):
-        """분기별 재무 시계열 (finance parquet 기반).
+        """분기별 standalone 시계열 (연결 기준).
 
         Returns:
             (series, periods) 또는 None.
@@ -558,7 +604,36 @@ class Company:
             series, periods = c.timeseries
             series["IS"]["revenue"]  # 분기별 매출 시계열
         """
-        return self._getFinanceTimeseries()
+        return self._getFinanceBuild("q", "CFS")
+
+    @property
+    def annual(self):
+        """연도별 시계열 (연결 기준).
+
+        Returns:
+            (series, years) 또는 None.
+
+        Example::
+
+            c = Company("005930")
+            series, years = c.annual
+            series["IS"]["revenue"]  # 연도별 매출 시계열
+        """
+        return self._getFinanceBuild("y", "CFS")
+
+    @property
+    def cumulative(self):
+        """분기별 누적 시계열 (연결 기준).
+
+        Returns:
+            (series, periods) 또는 None.
+
+        Example::
+
+            c = Company("005930")
+            series, periods = c.cumulative
+        """
+        return self._getFinanceBuild("cum", "CFS")
 
     # ── 전체 추출 ──
 
@@ -574,7 +649,7 @@ class Company:
         from dartlab.engines.docsParser.notes import _REGISTRY as notes_registry
 
         nNotes = len(notes_registry) if self._hasDocs else 0
-        total = len(_ALL_PROPERTIES) + nNotes + 2
+        total = len(_ALL_PROPERTIES) + nNotes + 3
         result: dict[str, Any] = {}
 
         if config.verbose:
@@ -607,6 +682,9 @@ class Company:
                 bar.text = "시계열"
                 result["timeseries"] = self.timeseries
                 bar()
+                bar.text = "연도별"
+                result["annual"] = self.annual
+                bar()
                 bar.text = "재무비율"
                 result["ratios"] = self.ratios
                 bar()
@@ -627,6 +705,7 @@ class Company:
                 result["notes"] = notes_result
 
             result["timeseries"] = self.timeseries
+            result["annual"] = self.annual
             result["ratios"] = self.ratios
 
         return result

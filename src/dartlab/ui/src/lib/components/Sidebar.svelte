@@ -1,0 +1,148 @@
+<script>
+	import { cn } from "$lib/utils.js";
+	import { Button } from "$lib/components/ui/button/index.js";
+	import { Plus, MessageSquare, Trash2, Search } from "lucide-svelte";
+
+	let {
+		conversations = [],
+		activeId = null,
+		open = true,
+		onNewChat,
+		onSelect,
+		onDelete,
+	} = $props();
+
+	let searchQuery = $state("");
+
+	function groupByDate(convs) {
+		const today = new Date().setHours(0, 0, 0, 0);
+		const yesterday = today - 86400000;
+		const weekAgo = today - 7 * 86400000;
+
+		const buckets = { "오늘": [], "어제": [], "이번 주": [], "이전": [] };
+
+		for (const c of convs) {
+			if (c.updatedAt >= today) buckets["오늘"].push(c);
+			else if (c.updatedAt >= yesterday) buckets["어제"].push(c);
+			else if (c.updatedAt >= weekAgo) buckets["이번 주"].push(c);
+			else buckets["이전"].push(c);
+		}
+
+		const groups = [];
+		for (const [label, items] of Object.entries(buckets)) {
+			if (items.length > 0) groups.push({ label, items });
+		}
+		return groups;
+	}
+
+	let filteredConversations = $derived(
+		searchQuery.trim()
+			? conversations.filter(c =>
+				c.title.toLowerCase().includes(searchQuery.toLowerCase())
+			)
+			: conversations
+	);
+	let groups = $derived(groupByDate(filteredConversations));
+</script>
+
+<aside class={cn(
+	"flex flex-col h-full bg-dl-bg-darker border-r border-dl-border transition-all duration-300 flex-shrink-0 overflow-hidden",
+	open ? "w-[260px]" : "w-[52px]"
+)}>
+	{#if open}
+		<div class="flex flex-col h-full min-w-[260px]">
+			<!-- Brand -->
+			<div class="flex items-center gap-2.5 px-4 pt-4 pb-2">
+				<img src="/avatar.png" alt="DartLab" class="w-8 h-8 rounded-full shadow-sm" />
+				<span class="text-[15px] font-bold text-dl-text tracking-tight">DartLab</span>
+			</div>
+
+			<!-- New Chat -->
+			<div class="p-3 pb-2">
+				<Button variant="secondary" class="w-full justify-start gap-2" onclick={onNewChat}>
+					<Plus size={16} />
+					새 대화
+				</Button>
+			</div>
+
+			<!-- Search -->
+			{#if conversations.length > 3}
+				<div class="px-3 pb-2">
+					<div class="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-dl-bg-card border border-dl-border">
+						<Search size={12} class="text-dl-text-dim flex-shrink-0" />
+						<input
+							type="text"
+							bind:value={searchQuery}
+							placeholder="대화 검색..."
+							class="flex-1 bg-transparent border-none outline-none text-[12px] text-dl-text placeholder:text-dl-text-dim"
+						/>
+					</div>
+				</div>
+			{/if}
+
+			<!-- Conversation List -->
+			<div class="flex-1 overflow-y-auto px-2 space-y-4">
+				{#each groups as group}
+					<div>
+						<div class="px-2 py-1.5 text-[11px] font-medium text-dl-text-dim uppercase tracking-wider">
+							{group.label}
+						</div>
+						{#each group.items as conv}
+							<!-- svelte-ignore a11y_no_static_element_interactions -->
+							<div
+								class={cn(
+									"w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left text-[13px] transition-colors group cursor-pointer",
+									conv.id === activeId
+										? "bg-dl-bg-card text-dl-text border-l-2 border-dl-primary"
+										: "text-dl-text-muted hover:bg-dl-bg-card/50 hover:text-dl-text border-l-2 border-transparent"
+								)}
+								onclick={() => onSelect?.(conv.id)}
+								onkeydown={(e) => { if (e.key === 'Enter') onSelect?.(conv.id); }}
+								role="button"
+								tabindex="0"
+							>
+								<MessageSquare size={14} class="flex-shrink-0 opacity-50" />
+								<span class="flex-1 truncate">{conv.title}</span>
+								<button
+									class="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-dl-bg-card-hover text-dl-text-dim hover:text-dl-primary transition-all"
+									onclick={(e) => { e.stopPropagation(); onDelete?.(conv.id); }}
+								>
+									<Trash2 size={12} />
+								</button>
+							</div>
+						{/each}
+					</div>
+				{/each}
+			</div>
+		</div>
+	{:else}
+		<!-- Collapsed: icon-only -->
+		<div class="flex flex-col items-center h-full min-w-[52px] py-3 gap-2">
+			<img src="/avatar.png" alt="DartLab" class="w-7 h-7 rounded-full shadow-sm mb-1" />
+			<button
+				class="p-2.5 rounded-lg text-dl-text-muted hover:text-dl-text hover:bg-dl-bg-card/50 transition-colors"
+				onclick={onNewChat}
+				title="새 대화"
+			>
+				<Plus size={18} />
+			</button>
+
+			<div class="flex-1 overflow-y-auto flex flex-col items-center gap-1 w-full px-1">
+				{#each conversations.slice(0, 10) as conv}
+					<button
+						class={cn(
+							"p-2 rounded-lg transition-colors w-full flex justify-center",
+							conv.id === activeId
+								? "bg-dl-bg-card text-dl-text"
+								: "text-dl-text-dim hover:text-dl-text-muted hover:bg-dl-bg-card/50"
+						)}
+						onclick={() => onSelect?.(conv.id)}
+						title={conv.title}
+					>
+						<MessageSquare size={16} />
+					</button>
+				{/each}
+			</div>
+		</div>
+	{/if}
+</aside>
