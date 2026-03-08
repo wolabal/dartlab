@@ -39,6 +39,10 @@ export const navigation: NavItem[] = [
 		items: [
 			{ title: 'Bridge Matching', href: '/docs/user-guide/bridge-matching' }
 		]
+	},
+	{
+		title: 'Changelog',
+		href: '/docs/changelog'
 	}
 ];
 
