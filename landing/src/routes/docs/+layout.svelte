@@ -65,6 +65,7 @@
 			</div>
 
 			<div class="dl-docs-header-right">
+				<a href="{base}/docs/changelog" class="dl-docs-nav-link">Changelog</a>
 				<a href="https://github.com/eddmpython/dartlab" target="_blank" rel="noopener" class="dl-docs-icon-link">
 					<Github size={18} />
 				</a>
@@ -231,6 +232,15 @@
 		align-items: center;
 		gap: 0.5rem;
 	}
+
+	.dl-docs-nav-link {
+		color: #a8a29e;
+		text-decoration: none;
+		font-size: 0.85rem;
+		font-weight: 500;
+		transition: color 0.15s;
+	}
+	.dl-docs-nav-link:hover { color: #fafaf9; }
 
 	.dl-docs-icon-link {
 		color: #78716c;
