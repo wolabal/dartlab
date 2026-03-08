@@ -4,6 +4,8 @@ title: 빠른 시작
 
 # 빠른 시작
 
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/eddmpython/dartlab/blob/master/notebooks/getting-started/quickstart.ipynb)
+
 DartLab은 DART 전자공시 문서를 분석하는 Python 라이브러리다. 종목코드 하나로 재무제표, 주석, 정기보고서, 텍스트를 구조화된 DataFrame으로 받는다.
 
 ## 설치
