@@ -3,7 +3,7 @@
 	import { base } from '$app/paths';
 	import { navigation, type NavItem } from '$lib/docs/navigation';
 	import { Github, Menu, X, ChevronRight, ChevronDown } from 'lucide-svelte';
-	import DocFooter from '$lib/components/DocFooter.svelte';
+	import Footer from '$lib/components/sections/Footer.svelte';
 
 	let { children } = $props();
 	let mobileNavOpen = $state(false);
@@ -157,7 +157,7 @@
 			<div class="dl-docs-content">
 				{@render children()}
 			</div>
-			<DocFooter />
+			<Footer />
 		</main>
 	</div>
 </div>

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { base } from '$app/paths';
 	import { Github } from 'lucide-svelte';
-	import DocFooter from '$lib/components/DocFooter.svelte';
+	import Footer from '$lib/components/sections/Footer.svelte';
 
 	let { children } = $props();
 </script>
@@ -29,7 +29,7 @@
 		{@render children()}
 	</main>
 
-	<DocFooter />
+	<Footer />
 </div>
 
 <style>
