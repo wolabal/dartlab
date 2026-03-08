@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { base } from '$app/paths';
+	import { brand } from '$lib/brand';
 	import { getPost, findPrevNext } from '$lib/blog/posts';
 	import { Calendar, ChevronLeft, ChevronRight } from 'lucide-svelte';
 	import { onMount, tick } from 'svelte';
@@ -119,6 +120,23 @@
 	const postInfo = $derived(getPost(data.slug));
 	const prevNext = $derived(findPrevNext(data.slug));
 
+	const pageTitle = $derived(`${meta?.title ?? 'Blog'} — DartLab`);
+	const pageDesc = $derived(meta?.description ?? `DartLab Blog — ${meta?.title ?? ''}`);
+	const pageUrl = $derived(`${brand.url}blog/${data.slug}`);
+	const pageImage = $derived(postInfo?.thumbnail ? `${brand.url}${postInfo.thumbnail.replace(/^\//, '')}` : `${brand.url}og-image.png`);
+	const jsonLd = $derived(JSON.stringify({
+		'@context': 'https://schema.org',
+		'@type': 'BlogPosting',
+		headline: meta?.title ?? '',
+		description: pageDesc,
+		url: pageUrl,
+		image: pageImage,
+		datePublished: postInfo?.date ?? '',
+		author: { '@type': 'Person', name: 'eddmpython', url: 'https://github.com/eddmpython' },
+		publisher: { '@type': 'Organization', name: 'DartLab', url: brand.url },
+		inLanguage: 'ko'
+	}));
+
 	let giscusEl: HTMLElement | undefined = $state();
 
 	$effect(() => {
@@ -173,12 +191,25 @@
 </script>
 
 <svelte:head>
-	<title>{meta?.title ?? 'Blog'} — DartLab</title>
-	{#if meta?.description}
-		<meta name="description" content={meta.description} />
-	{:else}
-		<meta name="description" content="DartLab Blog — {meta?.title ?? ''}" />
+	<title>{pageTitle}</title>
+	<meta name="description" content={pageDesc} />
+	<link rel="canonical" href={pageUrl} />
+	<meta property="og:type" content="article" />
+	<meta property="og:title" content={pageTitle} />
+	<meta property="og:description" content={pageDesc} />
+	<meta property="og:url" content={pageUrl} />
+	<meta property="og:site_name" content="DartLab" />
+	<meta property="og:image" content={pageImage} />
+	<meta property="og:locale" content="ko_KR" />
+	{#if postInfo?.date}
+		<meta property="article:published_time" content={postInfo.date} />
 	{/if}
+	<meta property="article:author" content="eddmpython" />
+	<meta name="twitter:card" content="summary" />
+	<meta name="twitter:title" content={pageTitle} />
+	<meta name="twitter:description" content={pageDesc} />
+	<meta name="twitter:image" content={pageImage} />
+	{@html `<script type="application/ld+json">${jsonLd}</script>`}
 </svelte:head>
 
 {#if data.status === 404}

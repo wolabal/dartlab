@@ -132,3 +132,81 @@ console.log(`  -> llms.txt generated (${sections.reduce((n, s) => n + s.files.le
 
 writeFileSync(resolve(buildDir, 'llms-full.txt'), fullParts.join('\n\n---\n\n') + '\n', 'utf-8');
 console.log(`  -> llms-full.txt generated (${Math.round(fullParts.join('').length / 1024)}KB)`);
+
+// sitemap.xml — auto-generate with docs + blog
+function extractFrontmatter(content) {
+	const fm = content.match(/^---\s*\n([\s\S]*?)\n---/);
+	if (!fm) return {};
+	const result = {};
+	for (const line of fm[1].split('\n')) {
+		const m = line.match(/^(\w+):\s*(.+)/);
+		if (m) result[m[1]] = m[2].trim().replace(/^['"]|['"]$/g, '');
+	}
+	return result;
+}
+
+const docUrls = docFiles.map(f => {
+	const url = `${siteUrl}/docs/` + f.rel.replace(/\.md$/, '').replace(/^\d+_/, '').replace(/\/\d+_/g, '/');
+	return { loc: url, priority: '0.7', changefreq: 'monthly' };
+});
+
+const blogPosts = blogFiles.map(f => {
+	const content = readFileSync(f.path, 'utf-8');
+	const fm = extractFrontmatter(content);
+	const slug = f.rel.replace(/\.md$/, '').replace(/^\d+-/, '');
+	return {
+		loc: `${siteUrl}/blog/${slug}`,
+		priority: '0.8',
+		changefreq: 'monthly',
+		lastmod: fm.date || null,
+		title: fm.title || slug,
+		description: fm.description || '',
+		date: fm.date || null
+	};
+});
+
+let sitemap = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
+sitemap += `  <url>\n    <loc>${siteUrl}/</loc>\n    <changefreq>weekly</changefreq>\n    <priority>1.0</priority>\n  </url>\n`;
+sitemap += `  <url>\n    <loc>${siteUrl}/docs/</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.9</priority>\n  </url>\n`;
+sitemap += `  <url>\n    <loc>${siteUrl}/blog/</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.9</priority>\n  </url>\n`;
+for (const u of docUrls) {
+	sitemap += `  <url>\n    <loc>${u.loc}</loc>\n    <changefreq>${u.changefreq}</changefreq>\n    <priority>${u.priority}</priority>\n  </url>\n`;
+}
+for (const p of blogPosts) {
+	sitemap += `  <url>\n    <loc>${p.loc}</loc>\n    <changefreq>${p.changefreq}</changefreq>\n    <priority>${p.priority}</priority>\n`;
+	if (p.lastmod) sitemap += `    <lastmod>${p.lastmod}</lastmod>\n`;
+	sitemap += `  </url>\n`;
+}
+sitemap += `</urlset>\n`;
+
+writeFileSync(resolve(buildDir, 'sitemap.xml'), sitemap, 'utf-8');
+console.log(`  -> sitemap.xml generated (${docUrls.length} docs + ${blogPosts.length} blog posts)`);
+
+// RSS feed (Atom)
+const feedUpdated = blogPosts.length > 0 ? blogPosts[0].date || new Date().toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
+
+let atom = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+atom += `<feed xmlns="http://www.w3.org/2005/Atom">\n`;
+atom += `  <title>DartLab Blog</title>\n`;
+atom += `  <subtitle>DART 전자공시 데이터 분석 — Read Beyond the Numbers</subtitle>\n`;
+atom += `  <link href="${siteUrl}/feed.xml" rel="self" type="application/atom+xml"/>\n`;
+atom += `  <link href="${siteUrl}/blog/" rel="alternate" type="text/html"/>\n`;
+atom += `  <id>${siteUrl}/blog/</id>\n`;
+atom += `  <updated>${feedUpdated}T00:00:00Z</updated>\n`;
+atom += `  <author>\n    <name>eddmpython</name>\n    <uri>https://github.com/eddmpython</uri>\n  </author>\n`;
+
+for (const p of blogPosts) {
+	atom += `  <entry>\n`;
+	atom += `    <title>${p.title.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</title>\n`;
+	atom += `    <link href="${p.loc}" rel="alternate" type="text/html"/>\n`;
+	atom += `    <id>${p.loc}</id>\n`;
+	if (p.date) atom += `    <published>${p.date}T00:00:00Z</published>\n`;
+	if (p.date) atom += `    <updated>${p.date}T00:00:00Z</updated>\n`;
+	if (p.description) atom += `    <summary>${p.description.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</summary>\n`;
+	atom += `  </entry>\n`;
+}
+
+atom += `</feed>\n`;
+
+writeFileSync(resolve(buildDir, 'feed.xml'), atom, 'utf-8');
+console.log(`  -> feed.xml generated (${blogPosts.length} entries)`);
