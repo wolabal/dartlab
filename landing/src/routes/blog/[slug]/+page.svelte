@@ -86,12 +86,31 @@
 
 	let cleanup: (() => void) | undefined;
 	let mounted = false;
+	let tocVisible = $state(true);
+	let footerEl: HTMLElement | undefined = $state();
+
+	function observeFooter() {
+		if (!footerEl) return;
+		const observer = new IntersectionObserver(
+			(entries) => {
+				for (const entry of entries) {
+					tocVisible = !entry.isIntersecting;
+				}
+			},
+			{ threshold: 0 }
+		);
+		observer.observe(footerEl);
+		return () => observer.disconnect();
+	}
+
+	let footerCleanup: (() => void) | undefined;
 
 	onMount(() => {
 		mounted = true;
 		return () => {
 			mounted = false;
 			cleanup?.();
+			footerCleanup?.();
 		};
 	});
 
@@ -112,6 +131,8 @@
 			extractToc();
 			cleanup?.();
 			cleanup = observeHeadings();
+			footerCleanup?.();
+			footerCleanup = observeFooter();
 			if (tocItems.length === 0 && articleEl) {
 				setTimeout(() => {
 					extractToc();
@@ -220,12 +241,12 @@
 
 			<div class="giscus-container" bind:this={giscusEl}></div>
 
-			<footer class="post-footer">
+			<footer class="post-footer" bind:this={footerEl}>
 				<a href="{base}/blog/" class="back-link">&larr; 모든 포스트 보기</a>
 			</footer>
 		</div>
 
-		<aside class="blog-toc">
+		<aside class="blog-toc" class:toc-hidden={!tocVisible}>
 			{#if tocItems.length > 0}
 				<div class="blog-toc-inner">
 					<span class="blog-toc-heading">On this page</span>
@@ -468,6 +489,13 @@
 		overflow-y: auto;
 		scrollbar-width: thin;
 		scrollbar-color: rgba(148, 163, 184, 0.15) transparent;
+		transition: opacity 0.2s;
+	}
+
+	.blog-toc.toc-hidden {
+		opacity: 0;
+		pointer-events: none;
+		transition: opacity 0.2s;
 	}
 
 	.blog-toc-inner { padding-top: 0.5rem; }
