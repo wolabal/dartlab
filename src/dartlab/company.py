@@ -35,7 +35,7 @@ from dartlab.core.kindList import (
     nameToCode,
     searchName,
 )
-from dartlab.notes import Notes
+from dartlab.engines.docsParser.notes import Notes
 
 
 # ── 모듈 레지스트리 ──
@@ -146,7 +146,7 @@ class Company:
         from dartlab import config
         if config.verbose:
             from dartlab.display import printRepr
-            from dartlab.notes import _REGISTRY as notesRegistry
+            from dartlab.engines.docsParser.notes import _REGISTRY as notesRegistry
             nProps = len([p for p in _ALL_PROPERTIES if p[0] not in ("BS", "IS", "CF")])
             printRepr(self.corpName, self.stockCode, nProps, len(notesRegistry))
             return ""
@@ -155,7 +155,7 @@ class Company:
     def guide(self):
         """전체 사용 가이드 출력."""
         from dartlab.display import printGuide
-        from dartlab.notes import _REGISTRY as notesRegistry
+        from dartlab.engines.docsParser.notes import _REGISTRY as notesRegistry
         props = [p[0] for p in _ALL_PROPERTIES if p[0] not in ("BS", "IS", "CF")]
         noteKeys = list(notesRegistry.keys())
         noteKeysKr = [v[1] for v in notesRegistry.values()]
@@ -476,7 +476,7 @@ class Company:
         from dartlab import config
 
         total = len(_ALL_PROPERTIES) + len(Notes._REGISTRY if hasattr(Notes, '_REGISTRY') else [])
-        from dartlab.notes import _REGISTRY as notes_registry
+        from dartlab.engines.docsParser.notes import _REGISTRY as notes_registry
         total = len(_ALL_PROPERTIES) + len(notes_registry)
         result: dict[str, Any] = {}
 
