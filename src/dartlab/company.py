@@ -112,6 +112,15 @@ def _import_and_call(modulePath: str, funcName: str, stockCode: str, **kwargs) -
     return func(stockCode, **kwargs)
 
 
+def _checkLocal(stockCode: str, category: str) -> bool:
+    """로컬에 parquet 파일이 있는지 확인 (다운로드 없이)."""
+    from dartlab.core.dataConfig import DATA_RELEASES
+    from pathlib import Path
+    dataRoot = Path(__file__).resolve().parents[2] / "data"
+    dirName = DATA_RELEASES[category]["dir"]
+    return (dataRoot / dirName / f"{stockCode}.parquet").exists()
+
+
 class Company:
     """종목코드 또는 회사명으로 전체 분석에 접근.
 
@@ -137,10 +146,29 @@ class Company:
             if code is None:
                 raise ValueError(f"'{codeOrName}'에 해당하는 종목을 찾을 수 없음")
             self.stockCode = code
-        df = loadData(self.stockCode)
-        self.corpName = extractCorpName(df)
         self._cache: dict[str, Any] = {}
-        self.notes = Notes(self)
+
+        self._hasDocs = _checkLocal(self.stockCode, "docs")
+        self._hasFinance = _checkLocal(self.stockCode, "finance")
+
+        if self._hasDocs:
+            df = loadData(self.stockCode, category="docs")
+            self.corpName = extractCorpName(df)
+        else:
+            self.corpName = codeToName(self.stockCode)
+
+        if self._hasFinance:
+            from dartlab.engines.financeEngine.pivot import buildTimeseries
+            ts = buildTimeseries(self.stockCode)
+            if ts is not None:
+                self._cache["_financeTs"] = ts
+            else:
+                self._hasFinance = False
+
+        if not self._hasDocs and not self._hasFinance:
+            raise ValueError(f"'{self.stockCode}' 데이터 없음 (docs/finance 모두 없음)")
+
+        self.notes = Notes(self) if self._hasDocs else None
 
     def __repr__(self):
         from dartlab import config
@@ -148,7 +176,8 @@ class Company:
             from dartlab.display import printRepr
             from dartlab.engines.docsParser.notes import _REGISTRY as notesRegistry
             nProps = len([p for p in _ALL_PROPERTIES if p[0] not in ("BS", "IS", "CF")])
-            printRepr(self.corpName, self.stockCode, nProps, len(notesRegistry))
+            nNotes = len(notesRegistry) if self._hasDocs else 0
+            printRepr(self.corpName, self.stockCode, nProps, nNotes)
             return ""
         return f"Company({self.stockCode}, {self.corpName})"
 
@@ -157,14 +186,20 @@ class Company:
         from dartlab.display import printGuide
         from dartlab.engines.docsParser.notes import _REGISTRY as notesRegistry
         props = [p[0] for p in _ALL_PROPERTIES if p[0] not in ("BS", "IS", "CF")]
-        noteKeys = list(notesRegistry.keys())
-        noteKeysKr = [v[1] for v in notesRegistry.values()]
+        if self._hasDocs:
+            noteKeys = list(notesRegistry.keys())
+            noteKeysKr = [v[1] for v in notesRegistry.values()]
+        else:
+            noteKeys = []
+            noteKeysKr = []
         printGuide(self.corpName, self.stockCode, props, noteKeys, noteKeysKr)
 
     # ── 내부 호출 ──
 
     def _call_module(self, name: str, **kwargs) -> Any:
         """모듈 호출 + 캐싱. Notes에서도 사용."""
+        if not self._hasDocs:
+            return None
         cacheKey = f"{name}:{kwargs}" if kwargs else name
         if cacheKey in self._cache:
             return self._cache[cacheKey]
@@ -176,6 +211,8 @@ class Company:
 
     def _call_notesDetail(self, keyword: str) -> Any:
         """notesDetail 호출 (키워드별 캐싱)."""
+        if not self._hasDocs:
+            return None
         cacheKey = f"notesDetail:{keyword}"
         if cacheKey in self._cache:
             return self._cache[cacheKey]
@@ -235,6 +272,8 @@ class Company:
 
     def docs(self) -> pl.DataFrame:
         """이 종목의 공시 문서 목록 + DART 뷰어 링크."""
+        if not self._hasDocs:
+            return pl.DataFrame(schema={"year": pl.Utf8, "rceptDate": pl.Utf8, "rceptNo": pl.Utf8, "reportType": pl.Utf8, "dartUrl": pl.Utf8})
         df = loadData(self.stockCode)
         docs = (
             df.select("year", "rcept_date", "rcept_no", "report_type")
@@ -446,6 +485,8 @@ class Company:
     @property
     def holderOverview(self) -> Any:
         """5% 이상 주주, 소액주주, 의결권 현황."""
+        if not self._hasDocs:
+            return None
         cacheKey = "holderOverview"
         if cacheKey in self._cache:
             return self._cache[cacheKey]
@@ -464,6 +505,61 @@ class Company:
         """요약재무정보 시계열 + 브릿지 매칭 + 전환점 탐지."""
         return self._call_module("fsSummary", ifrsOnly=ifrsOnly, period=period)
 
+    # ── financeEngine (숫자 재무 데이터) ──
+
+    def _getFinanceTimeseries(self):
+        """finance parquet 분기별 시계열 (캐싱)."""
+        cacheKey = "_financeTs"
+        if cacheKey in self._cache:
+            return self._cache[cacheKey]
+        from dartlab.engines.financeEngine.pivot import buildTimeseries
+        result = buildTimeseries(self.stockCode)
+        self._cache[cacheKey] = result
+        return result
+
+    @property
+    def ratios(self):
+        """재무비율 (ROE, ROA, 마진, 부채비율 등).
+
+        Returns:
+            RatioResult dataclass.
+
+        Example::
+
+            c = Company("005930")
+            c.ratios.roe            # 8.57
+            c.ratios.operatingMargin  # 10.88
+            c.ratios.debtRatio      # 27.93
+        """
+        cacheKey = "_ratios"
+        if cacheKey in self._cache:
+            return self._cache[cacheKey]
+        from dartlab.engines.financeEngine.ratios import calcRatios
+        ts = self._getFinanceTimeseries()
+        if ts is None:
+            return None
+        series, _ = ts
+        result = calcRatios(series)
+        self._cache[cacheKey] = result
+        return result
+
+    @property
+    def timeseries(self):
+        """분기별 재무 시계열 (finance parquet 기반).
+
+        Returns:
+            (series, periods) 또는 None.
+            series = {"BS": {"snakeId": [값...]}, "IS": {...}, "CF": {...}}
+            periods = ["2016_Q1", "2016_Q2", ..., "2024_Q4"]
+
+        Example::
+
+            c = Company("005930")
+            series, periods = c.timeseries
+            series["IS"]["revenue"]  # 분기별 매출 시계열
+        """
+        return self._getFinanceTimeseries()
+
     # ── 전체 추출 ──
 
     def all(self) -> dict[str, Any]:
@@ -472,12 +568,13 @@ class Company:
         Returns:
             {"BS": DataFrame, "IS": DataFrame, "dividend": DataFrame, ...}
             notes 항목은 "notes" 키 아래 dict로 포함.
+            finance 항목은 "timeseries", "ratios" 키로 포함.
         """
         from dartlab import config
-
-        total = len(_ALL_PROPERTIES) + len(Notes._REGISTRY if hasattr(Notes, '_REGISTRY') else [])
         from dartlab.engines.docsParser.notes import _REGISTRY as notes_registry
-        total = len(_ALL_PROPERTIES) + len(notes_registry)
+
+        nNotes = len(notes_registry) if self._hasDocs else 0
+        total = len(_ALL_PROPERTIES) + nNotes + 2
         result: dict[str, Any] = {}
 
         if config.verbose:
@@ -486,7 +583,6 @@ class Company:
                 for name, label in _ALL_PROPERTIES:
                     bar.text = label
                     try:
-                        # verbose 이미 켜져있으므로 _get_primary 내부 출력 억제
                         config.verbose = False
                         result[name] = getattr(self, name)
                         config.verbose = True
@@ -495,18 +591,25 @@ class Company:
                         config.verbose = True
                     bar()
 
-                # notes
-                for noteName in notes_registry:
-                    krName = notes_registry[noteName][1]
-                    bar.text = krName
-                    try:
-                        config.verbose = False
-                        result.setdefault("notes", {})[noteName] = self.notes._get(noteName)
-                        config.verbose = True
-                    except Exception:
-                        result.setdefault("notes", {})[noteName] = None
-                        config.verbose = True
-                    bar()
+                if self._hasDocs and self.notes is not None:
+                    for noteName in notes_registry:
+                        krName = notes_registry[noteName][1]
+                        bar.text = krName
+                        try:
+                            config.verbose = False
+                            result.setdefault("notes", {})[noteName] = self.notes._get(noteName)
+                            config.verbose = True
+                        except Exception:
+                            result.setdefault("notes", {})[noteName] = None
+                            config.verbose = True
+                        bar()
+
+                bar.text = "시계열"
+                result["timeseries"] = self.timeseries
+                bar()
+                bar.text = "재무비율"
+                result["ratios"] = self.ratios
+                bar()
         else:
             for name, label in _ALL_PROPERTIES:
                 try:
@@ -514,13 +617,17 @@ class Company:
                 except Exception:
                     result[name] = None
 
-            notes_result = {}
-            for noteName in notes_registry:
-                try:
-                    notes_result[noteName] = self.notes._get(noteName)
-                except Exception:
-                    notes_result[noteName] = None
-            result["notes"] = notes_result
+            if self._hasDocs and self.notes is not None:
+                notes_result = {}
+                for noteName in notes_registry:
+                    try:
+                        notes_result[noteName] = self.notes._get(noteName)
+                    except Exception:
+                        notes_result[noteName] = None
+                result["notes"] = notes_result
+
+            result["timeseries"] = self.timeseries
+            result["ratios"] = self.ratios
 
         return result
 
@@ -544,3 +651,157 @@ class Company:
         if name == "holderOverview":
             return self.holderOverview
         return self._call_module(name, **kwargs)
+
+    # ── LLM 분석 ──
+
+    def ask(
+        self,
+        question: str,
+        *,
+        include: list[str] | None = None,
+        exclude: list[str] | None = None,
+        provider: str | None = None,
+        model: str | None = None,
+        stream: bool = False,
+        **kwargs,
+    ) -> str:
+        """LLM에게 이 기업에 대해 질문.
+
+        Args:
+            question: 질문 텍스트 (한국어 또는 영어)
+            include: 명시적으로 포함할 데이터 ["BS", "dividend", ...]
+            exclude: 제외할 데이터
+            provider: per-call provider override
+            model: per-call model override
+            stream: True면 터미널에 스트리밍 출력 후 전체 텍스트 반환
+            **kwargs: LLMConfig override (temperature, max_tokens, ...)
+
+        Returns:
+            LLM 응답 텍스트
+
+        Example::
+
+            c = Company("005930")
+            c.ask("재무 건전성을 분석해줘")
+            c.ask("배당 추세", include=["dividend", "IS"])
+            c.ask("부채 리스크", provider="ollama", model="llama3.1")
+        """
+        from dartlab.engines.llmAnalyzer import get_config
+        from dartlab.engines.llmAnalyzer.context import build_context, _get_sector
+        from dartlab.engines.llmAnalyzer.pipeline import run_pipeline
+        from dartlab.engines.llmAnalyzer.prompts import build_system_prompt, _classify_question
+        from dartlab.engines.llmAnalyzer.providers import create_provider
+
+        config_ = get_config()
+        overrides = {
+            k: v
+            for k, v in {"provider": provider, "model": model, **kwargs}.items()
+            if v is not None
+        }
+        if overrides:
+            config_ = config_.merge(overrides)
+
+        context_text, included_tables = build_context(
+            self, question, include=include, exclude=exclude,
+        )
+
+        # 파이프라인: LLM 호출 전 자동 분석
+        pipeline_result = run_pipeline(self, question, included_tables)
+        if pipeline_result:
+            context_text = context_text + pipeline_result
+
+        sector = _get_sector(self)
+        question_type = _classify_question(question)
+        system = build_system_prompt(
+            config_.system_prompt,
+            included_modules=included_tables,
+            sector=sector,
+            question_type=question_type,
+        )
+        messages = [
+            {"role": "system", "content": system},
+            {"role": "user", "content": f"{context_text}\n\n---\n\n질문: {question}"},
+        ]
+
+        llm = create_provider(config_)
+
+        if stream:
+            chunks = []
+            for chunk in llm.stream(messages):
+                print(chunk, end="", flush=True)
+                chunks.append(chunk)
+            print()
+            return "".join(chunks)
+
+        response = llm.complete(messages)
+        response.context_tables = included_tables
+
+        from dartlab import config
+        if config.verbose:
+            print(f"  [LLM] {response.provider}/{response.model}")
+            if response.usage:
+                print(f"  [LLM] tokens: {response.usage.get('total_tokens', '?')}")
+
+        return response.answer
+
+    def chat(
+        self,
+        question: str,
+        *,
+        provider: str | None = None,
+        model: str | None = None,
+        max_turns: int = 5,
+        on_tool_call=None,
+        on_tool_result=None,
+        **kwargs,
+    ) -> str:
+        """에이전트 모드: LLM이 필요한 도구를 직접 선택하여 분석.
+
+        ask()와 달리 모든 데이터를 미리 로딩하지 않고,
+        LLM이 tool calling으로 필요한 데이터를 요청한다.
+
+        Args:
+            question: 질문 텍스트
+            provider: per-call provider override
+            model: per-call model override
+            max_turns: 최대 도구 호출 반복 횟수
+            on_tool_call: 도구 호출 시 콜백 (UI용)
+            on_tool_result: 도구 결과 시 콜백 (UI용)
+            **kwargs: LLMConfig override
+
+        Returns:
+            LLM 최종 응답 텍스트
+
+        Example::
+
+            c = Company("005930")
+            c.chat("재무 건전성을 분석하고 이상 징후를 찾아줘")
+            c.chat("배당 추세", provider="ollama", model="llama3.1")
+        """
+        from dartlab.engines.llmAnalyzer import get_config
+        from dartlab.engines.llmAnalyzer.agent import AGENT_SYSTEM_ADDITION, agent_loop
+        from dartlab.engines.llmAnalyzer.prompts import build_system_prompt
+        from dartlab.engines.llmAnalyzer.providers import create_provider
+
+        config_ = get_config()
+        overrides = {
+            k: v
+            for k, v in {"provider": provider, "model": model, **kwargs}.items()
+            if v is not None
+        }
+        if overrides:
+            config_ = config_.merge(overrides)
+
+        system = build_system_prompt(config_.system_prompt) + AGENT_SYSTEM_ADDITION
+        messages = [
+            {"role": "system", "content": system},
+            {"role": "user", "content": f"기업: {self.corpName} ({self.stockCode})\n\n{question}"},
+        ]
+
+        llm = create_provider(config_)
+        return agent_loop(
+            llm, messages, self,
+            max_turns=max_turns,
+            on_tool_call=on_tool_call,
+            on_tool_result=on_tool_result,
+        )

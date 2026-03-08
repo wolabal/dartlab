@@ -11,7 +11,10 @@ export const brand = {
 
 	data: {
 		docs: { tag: 'data-docs', label: 'DART 공시 문서 데이터' },
-		finance: { tag: 'data-finance', label: '재무 숫자 데이터' },
+		finance: {
+			label: '재무 숫자 데이터',
+			shards: ['data-finance-1', 'data-finance-2', 'data-finance-3', 'data-finance-4'],
+		},
 	},
 
 	color: {

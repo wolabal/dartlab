@@ -1,18 +1,24 @@
 """데이터 로딩 및 공통 유틸."""
 
 import json
+import socket
+from datetime import datetime, timezone
 from pathlib import Path
+from urllib.error import URLError
 from urllib.request import urlopen, urlretrieve
 
 import polars as pl
 
-from dartlab.core.dataConfig import DATA_RELEASES, releaseBaseUrl, releaseApiUrl
+from dartlab.core.dataConfig import (
+    DATA_RELEASES,
+    financeAllTags,
+    releaseApiUrl,
+    releaseBaseUrl,
+)
 
 _DATA_ROOT = Path(__file__).resolve().parents[3] / "data"
 
-
-def _dataDir(category: str = "docs") -> Path:
-    return _DATA_ROOT / DATA_RELEASES[category]["dir"]
+_DOWNLOAD_TIMEOUT = 30
 
 PERIOD_KINDS = {
     "y": ["annual"],
@@ -21,10 +27,19 @@ PERIOD_KINDS = {
 }
 
 
+def _dataDir(category: str = "docs") -> Path:
+    return _DATA_ROOT / DATA_RELEASES[category]["dir"]
+
+
 def _download(stockCode: str, dest: Path, category: str = "docs") -> None:
-    url = f"{releaseBaseUrl(category)}/{stockCode}.parquet"
+    url = f"{releaseBaseUrl(category, stockCode=stockCode)}/{stockCode}.parquet"
     dest.parent.mkdir(parents=True, exist_ok=True)
-    urlretrieve(url, dest)
+    old_timeout = socket.getdefaulttimeout()
+    try:
+        socket.setdefaulttimeout(_DOWNLOAD_TIMEOUT)
+        urlretrieve(url, dest)
+    finally:
+        socket.setdefaulttimeout(old_timeout)
 
 
 def loadData(stockCode: str, category: str = "docs") -> pl.DataFrame:
@@ -34,40 +49,118 @@ def loadData(stockCode: str, category: str = "docs") -> pl.DataFrame:
     if not path.exists():
         label = DATA_RELEASES[category]["label"]
         print(f"[dartlab] {stockCode}.parquet ({label}) 로컬에 없음 → GitHub Release에서 다운로드...")
-        _download(stockCode, path, category)
-        print(f"[dartlab] 저장 완료: {path}")
+        try:
+            _download(stockCode, path, category)
+            print(f"[dartlab] 저장 완료: {path}")
+        except (URLError, socket.timeout, OSError) as e:
+            if path.exists():
+                path.unlink()
+            raise RuntimeError(
+                f"데이터 다운로드 실패 ({stockCode}): {e}. "
+                f"네트워크를 확인하거나 `dartlab download`로 미리 받아두세요."
+            ) from e
     return pl.read_parquet(str(path))
 
 
-def downloadAll(category: str = "docs") -> None:
-    """GitHub Release의 전체 parquet을 한번에 다운로드."""
+def _fetchAssets(tag: str) -> list[dict]:
+    """릴리즈 태그에서 에셋 목록 + updated_at 조회."""
+    old_timeout = socket.getdefaulttimeout()
+    try:
+        socket.setdefaulttimeout(_DOWNLOAD_TIMEOUT)
+        with urlopen(releaseApiUrl(tag=tag)) as resp:
+            data = json.loads(resp.read())
+    finally:
+        socket.setdefaulttimeout(old_timeout)
+    return [a for a in data["assets"] if a["name"].endswith(".parquet")]
+
+
+def _isOutdated(localPath: Path, remoteUpdatedAt: str) -> bool:
+    """로컬 파일이 원격보다 오래됐는지 확인."""
+    if not localPath.exists():
+        return True
+    localMtime = datetime.fromtimestamp(localPath.stat().st_mtime, tz=timezone.utc)
+    remoteTime = datetime.fromisoformat(remoteUpdatedAt.replace("Z", "+00:00"))
+    return localMtime < remoteTime
+
+
+def downloadAll(category: str = "docs", *, forceUpdate: bool = False) -> None:
+    """GitHub Release의 전체 parquet을 한번에 다운로드.
+
+    Args:
+        category: "docs" 또는 "finance".
+        forceUpdate: True면 로컬 파일이 있어도 원격 업데이트 일자가 더 최신이면 재다운로드.
+    """
     from alive_progress import alive_bar
 
     dataDir = _dataDir(category)
     dataDir.mkdir(parents=True, exist_ok=True)
     label = DATA_RELEASES[category]["label"]
 
-    print(f"[dartlab] {label} — GitHub Release 에셋 목록 조회 중...")
-    with urlopen(releaseApiUrl(category)) as resp:
-        data = json.loads(resp.read())
-    assets = [a for a in data["assets"] if a["name"].endswith(".parquet")]
+    if category == "finance":
+        tags = financeAllTags()
+    else:
+        tags = [DATA_RELEASES[category]["tag"]]
 
-    existing = {p.name for p in dataDir.glob("*.parquet")}
-    toDownload = [a for a in assets if a["name"] not in existing]
+    allAssets: list[dict] = []
+    print(f"[dartlab] {label} — GitHub Release 에셋 목록 조회 중... ({len(tags)}개 태그)")
+    for tag in tags:
+        assets = _fetchAssets(tag)
+        allAssets.extend(assets)
+        print(f"  {tag}: {len(assets)}개")
+
+    toDownload = []
+    skipped = 0
+    for asset in allAssets:
+        dest = dataDir / asset["name"]
+        if forceUpdate and _isOutdated(dest, asset["updated_at"]):
+            toDownload.append(asset)
+        elif not dest.exists():
+            toDownload.append(asset)
+        else:
+            skipped += 1
 
     if not toDownload:
-        print(f"[dartlab] 전체 {len(assets)}종목 이미 다운로드 완료 ({dataDir})")
+        print(f"[dartlab] 전체 {len(allAssets)}종목 이미 최신 ({dataDir})")
         return
 
-    print(f"[dartlab] 신규 {len(toDownload)}종목 다운로드 (기존 {len(existing)}종목 스킵)")
+    action = "다운로드 (신규+업데이트)" if forceUpdate else "신규 다운로드"
+    print(f"[dartlab] {action}: {len(toDownload)}종목 (스킵: {skipped})")
 
     with alive_bar(len(toDownload), title="다운로드") as bar:
         for asset in toDownload:
             dest = dataDir / asset["name"]
-            urlretrieve(asset["browser_download_url"], dest)
+            old_timeout = socket.getdefaulttimeout()
+            try:
+                socket.setdefaulttimeout(_DOWNLOAD_TIMEOUT)
+                urlretrieve(asset["browser_download_url"], dest)
+            except (URLError, socket.timeout, OSError) as e:
+                print(f"\n[dartlab] {asset['name']} 다운로드 실패: {e}")
+                if dest.exists():
+                    dest.unlink()
+            finally:
+                socket.setdefaulttimeout(old_timeout)
             bar()
 
     print(f"[dartlab] 완료 → {dataDir}")
+
+
+def download(stockCode: str) -> None:
+    """특정 종목의 docs + finance 데이터를 모두 다운로드."""
+    for category in DATA_RELEASES:
+        dataDir = _dataDir(category)
+        dest = dataDir / f"{stockCode}.parquet"
+        label = DATA_RELEASES[category]["label"]
+        if dest.exists():
+            print(f"[dartlab] {stockCode} ({label}) 이미 존재")
+            continue
+        print(f"[dartlab] {stockCode} ({label}) 다운로드 중...")
+        try:
+            _download(stockCode, dest, category)
+            print(f"[dartlab] 저장 완료: {dest}")
+        except (URLError, socket.timeout, OSError) as e:
+            if dest.exists():
+                dest.unlink()
+            print(f"[dartlab] {stockCode} ({label}) 다운로드 실패: {e}")
 
 
 DART_VIEWER = "https://dart.fss.or.kr/dsaf001/main.do?rcpNo="
