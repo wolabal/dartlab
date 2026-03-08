@@ -1,6 +1,19 @@
 import adapter from '@sveltejs/adapter-static';
 import { mdsvex } from 'mdsvex';
 import { createHighlighter } from 'shiki';
+import { visit } from 'unist-util-visit';
+
+const basePath = process.env.BASE_PATH || '';
+
+function rehypeBaseUrl() {
+	return (tree) => {
+		visit(tree, 'element', (node) => {
+			if (node.tagName === 'img' && node.properties?.src?.startsWith('/')) {
+				node.properties.src = basePath + node.properties.src;
+			}
+		});
+	};
+}
 
 const highlighter = await createHighlighter({
 	themes: ['github-dark'],
@@ -13,6 +26,7 @@ const config = {
 	preprocess: [
 		mdsvex({
 			extensions: ['.md'],
+			rehypePlugins: [rehypeBaseUrl],
 			highlight: {
 				highlighter: (code, lang) => {
 					const html = highlighter.codeToHtml(code, {
