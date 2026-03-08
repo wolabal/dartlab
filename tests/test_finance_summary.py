@@ -8,7 +8,7 @@ from tests.conftest import SAMSUNG, requires_samsung
 @requires_samsung
 class TestAnalyze:
     def test_basic(self):
-        from dartlab.finance.summary import fsSummary
+        from dartlab.engines.docsParser.finance.summary import fsSummary
         r = fsSummary(SAMSUNG)
         assert r is not None
         assert r.corpName == "삼성전자"
@@ -16,7 +16,7 @@ class TestAnalyze:
         assert len(r.FS) > 0
 
     def test_bs_is(self):
-        from dartlab.finance.summary import fsSummary
+        from dartlab.engines.docsParser.finance.summary import fsSummary
         r = fsSummary(SAMSUNG)
         assert r.BS is not None
         assert r.IS is not None
@@ -24,6 +24,6 @@ class TestAnalyze:
         assert len(r.IS) > 0
 
     def test_matching_rate(self):
-        from dartlab.finance.summary import fsSummary
+        from dartlab.engines.docsParser.finance.summary import fsSummary
         r = fsSummary(SAMSUNG)
         assert r.allRate >= 0.8

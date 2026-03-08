@@ -6,7 +6,7 @@ from tests.conftest import SAMSUNG, requires_samsung
 @requires_samsung
 class TestBusiness:
     def test_basic(self):
-        from dartlab.disclosure.business import business
+        from dartlab.engines.docsParser.disclosure.business import business
         r = business(SAMSUNG)
         assert r is not None
         assert r.sections is not None
@@ -15,7 +15,7 @@ class TestBusiness:
 @requires_samsung
 class TestOverview:
     def test_basic(self):
-        from dartlab.disclosure.companyOverview import companyOverview
+        from dartlab.engines.docsParser.disclosure.companyOverview import companyOverview
         r = companyOverview(SAMSUNG)
         assert r is not None
 
@@ -23,7 +23,7 @@ class TestOverview:
 @requires_samsung
 class TestMdna:
     def test_basic(self):
-        from dartlab.disclosure.mdna import mdna
+        from dartlab.engines.docsParser.disclosure.mdna import mdna
         r = mdna(SAMSUNG)
         assert r is not None
         assert r.sections is not None
@@ -32,6 +32,6 @@ class TestMdna:
 @requires_samsung
 class TestRawMaterial:
     def test_basic(self):
-        from dartlab.disclosure.rawMaterial import rawMaterial
+        from dartlab.engines.docsParser.disclosure.rawMaterial import rawMaterial
         r = rawMaterial(SAMSUNG)
         assert r is not None

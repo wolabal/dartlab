@@ -12,16 +12,24 @@
 
 ```
 dartlab/
-├── core/          # 데이터 로딩, 보고서 선택, 테이블 파싱
-├── finance/       # 정량 재무 데이터 (36개 모듈)
-├── disclosure/    # 공시 서술형 섹션 (4개 모듈)
-├── company.py     # 통합 접근 래퍼 (property 기반)
-├── notes.py       # K-IFRS 주석 통합 접근
-└── config.py      # 전역 설정 (verbose)
+├── core/                          # 데이터 로딩, 보고서 선택, 테이블 파싱
+├── engines/
+│   ├── docsParser/                # 공시 문서 파싱 엔진
+│   │   ├── finance/               # 정량 재무 데이터 (36개 모듈)
+│   │   ├── disclosure/            # 공시 서술형 섹션 (4개 모듈)
+│   │   └── notes.py               # K-IFRS 주석 통합 접근
+│   └── financeEngine/             # 재무 숫자 데이터 엔진
+│       ├── mapper.py              # XBRL 계정 → snakeId 매핑
+│       ├── pivot.py               # 시계열 빌드 (분기/연도/누적)
+│       ├── extract.py             # 값 추출 (TTM, Latest 등)
+│       └── ratios.py              # 재무비율 계산
+├── company.py                     # 통합 접근 래퍼 (property 기반)
+└── config.py                      # 전역 설정 (verbose)
 ```
 
-- `finance/` — 숫자·테이블 중심: 재무제표, 배당, 주주, 자본, 부문별 매출 등
-- `disclosure/` — 텍스트·서술 중심: 사업의 내용, 경영진단의견, 원재료, 회사의 개요 등
+- `engines/docsParser/finance/` — 공시 문서 기반 숫자·테이블: 재무제표, 배당, 주주, 자본 등
+- `engines/docsParser/disclosure/` — 공시 문서 기반 텍스트·서술: 사업의 내용, MD&A 등
+- `engines/financeEngine/` — 재무 숫자 데이터 엔진: XBRL 매핑, 시계열, 비율 계산
 
 ## 전역 설정
 
@@ -50,7 +58,7 @@ c.corpName                  # "삼성전자"
 ```python
 c = Company("005930")
 
-# 1. property → 바로 DataFrame
+# 1. property → 바로 DataFrame (docsParser 기반)
 c.BS                        # 재무상태표
 c.dividend                  # 배당 시계열
 
@@ -58,15 +66,25 @@ c.dividend                  # 배당 시계열
 c.notes.inventory           # 재고자산
 c.notes["재고자산"]          # 동일
 
-# 3. all() → 전체 dict
-d = c.all()                 # {"BS": df, "dividend": df, "notes": {...}, ...}
+# 3. financeEngine → 재무 숫자 시계열
+s, p = c.timeseries         # 분기별 standalone (CFS 기본)
+s, y = c.annual             # 연도별
+s, p = c.cumulative         # 분기별 누적
+r = c.ratios                # 재무비율 (RatioResult)
 
-# 4. get() → 모듈 전체 Result 객체 (복수 DataFrame 접근)
+# 4. financeEngine → 커스텀 조회 (연결/별도, 기간)
+s, p = c.getTimeseries("y", fsDivPref="OFS")  # 별도 연도별
+r = c.getRatios("OFS")                         # 별도 비율
+
+# 5. all() → 전체 dict
+d = c.all()                 # {"BS": df, "dividend": df, "timeseries": ..., "annual": ..., "ratios": ..., ...}
+
+# 6. get() → 모듈 전체 Result 객체 (복수 DataFrame 접근)
 r = c.get("audit")          # AuditResult
 r.opinionDf                 # 감사의견
 r.feeDf                     # 감사보수
 
-# 5. fsSummary() → 파라미터가 있는 유일한 메서드
+# 7. fsSummary() → 파라미터가 있는 메서드
 r = c.fsSummary(period="q") # AnalysisResult
 ```
 
@@ -154,10 +172,23 @@ c.notes.keys_kr()             # 한글 키워드 목록
 c.notes.all()                 # 전체 dict
 ```
 
+### property — financeEngine
+
+| property | 반환 타입 | 설명 |
+|----------|-----------|------|
+| `timeseries` | (series, periods) \| None | 분기별 standalone 시계열 (CFS) |
+| `annual` | (series, years) \| None | 연도별 시계열 (CFS) |
+| `cumulative` | (series, periods) \| None | 분기별 누적 시계열 (CFS) |
+| `ratios` | RatioResult \| None | 재무비율 (CFS) |
+
+series 구조: `{"BS": {"snakeId": [값...]}, "IS": {...}, "CF": {...}}`
+
 ### 메서드
 
 | 메서드 | 파라미터 | 반환 타입 | 설명 |
 |--------|----------|-----------|------|
+| `getTimeseries()` | period("q"/"y"/"cum"), fsDivPref("CFS"/"OFS") | (series, periods) \| None | 커스텀 시계열 조회 |
+| `getRatios()` | fsDivPref("CFS"/"OFS") | RatioResult \| None | 커스텀 비율 계산 |
 | `fsSummary()` | ifrsOnly, period | AnalysisResult | 요약재무정보 + 브릿지 매칭 |
 | `all()` | - | dict | 전체 데이터 dict (progress bar 포함) |
 | `get(name)` | name, **kwargs | Result 객체 | 모듈 전체 Result 접근 |
@@ -170,7 +201,7 @@ c.notes.all()                 # 전체 dict
 ### finance.summary — fsSummary
 
 ```python
-from dartlab.finance.summary import fsSummary
+from dartlab.engines.docsParser.finance.summary import fsSummary
 result = fsSummary("005930", ifrsOnly=True, period="y")
 ```
 
@@ -192,7 +223,7 @@ result = fsSummary("005930", ifrsOnly=True, period="y")
 ### finance.statements
 
 ```python
-from dartlab.finance.statements import statements
+from dartlab.engines.docsParser.finance.statements import statements
 result = statements("005930", ifrsOnly=True, period="y")
 ```
 
@@ -524,7 +555,7 @@ result = statements("005930", ifrsOnly=True, period="y")
 ### finance.notesDetail
 
 ```python
-from dartlab.finance.notesDetail import notesDetail
+from dartlab.engines.docsParser.finance.notesDetail import notesDetail
 result = notesDetail("005930", keyword="재고자산")
 ```
 
@@ -636,3 +667,94 @@ result = notesDetail("005930", keyword="재고자산")
 | materials | list[RawMaterial] | 원재료 매입 항목 |
 | equipment | Equipment \| None | 유형자산 기말잔액 |
 | capexItems | list[CapexItem] | 시설투자 항목 |
+
+---
+
+## financeEngine
+
+재무 숫자 데이터 엔진. OpenDART 재무제표 parquet에서 XBRL 계정 표준화 → 시계열 빌드 → 비율 계산.
+
+### 시계열 빌드
+
+```python
+from dartlab.engines.financeEngine import buildTimeseries, buildAnnual, buildCumulative
+```
+
+| 함수 | 시그니처 | 설명 |
+|------|----------|------|
+| `buildTimeseries` | `(stockCode, fsDivPref="CFS") → (series, periods) \| None` | 분기별 standalone |
+| `buildAnnual` | `(stockCode, fsDivPref="CFS") → (series, years) \| None` | 연도별 집계 |
+| `buildCumulative` | `(stockCode, fsDivPref="CFS") → (series, periods) \| None` | 분기별 누적 |
+
+**series 구조:**
+```python
+{
+    "BS": {"total_assets": [v1, v2, ...], "total_equity": [...], ...},
+    "IS": {"revenue": [...], "operating_income": [...], ...},
+    "CF": {"operating_cashflow": [...], ...},
+}
+```
+
+**fsDivPref:** `"CFS"` (연결, 기본) 또는 `"OFS"` (별도). 없으면 자동 fallback.
+
+### 값 추출
+
+```python
+from dartlab.engines.financeEngine import getTTM, getLatest, getAnnualValues, getRevenueGrowth3Y
+```
+
+| 함수 | 시그니처 | 설명 |
+|------|----------|------|
+| `getTTM` | `(series, sjDiv, snakeId) → float \| None` | 최근 4분기 합 (IS/CF용) |
+| `getLatest` | `(series, sjDiv, snakeId) → float \| None` | 최신 non-null 값 (BS용) |
+| `getAnnualValues` | `(series, sjDiv, snakeId) → list` | 전체 시계열 값 리스트 |
+| `getRevenueGrowth3Y` | `(series) → float \| None` | 매출 3년 CAGR (%) |
+
+### 비율 계산
+
+```python
+from dartlab.engines.financeEngine import calcRatios
+```
+
+| 함수 | 시그니처 | 설명 |
+|------|----------|------|
+| `calcRatios` | `(series, marketCap=None) → RatioResult` | 재무비율 계산 |
+
+#### RatioResult
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| revenueTTM | float \| None | 매출 TTM |
+| operatingIncomeTTM | float \| None | 영업이익 TTM |
+| netIncomeTTM | float \| None | 순이익 TTM |
+| operatingCashflowTTM | float \| None | 영업CF TTM |
+| totalAssets | float \| None | 총자산 |
+| totalEquity | float \| None | 총자본 |
+| totalLiabilities | float \| None | 총부채 |
+| currentAssets | float \| None | 유동자산 |
+| currentLiabilities | float \| None | 유동부채 |
+| cash | float \| None | 현금 |
+| roe | float \| None | 자기자본이익률 (%) |
+| roa | float \| None | 총자산이익률 (%) |
+| operatingMargin | float \| None | 영업이익률 (%) |
+| netMargin | float \| None | 순이익률 (%) |
+| debtRatio | float \| None | 부채비율 (%) |
+| currentRatio | float \| None | 유동비율 (%) |
+| fcf | float \| None | 잉여현금흐름 |
+| revenueGrowth3Y | float \| None | 매출 3년 CAGR (%) |
+| per | float \| None | 주가수익비율 (시가총액 필요) |
+| pbr | float \| None | 주가순자산비율 (시가총액 필요) |
+| psr | float \| None | 주가매출비율 (시가총액 필요) |
+| evEbitda | float \| None | EV/EBITDA (시가총액 필요) |
+| warnings | list[str] | 경고 메시지 |
+
+### 계정 매핑
+
+```python
+from dartlab.engines.financeEngine import AccountMapper
+
+mapper = AccountMapper.get()
+snakeId = mapper.map("ifrs-full_Revenue", "매출액")  # → "revenue"
+```
+
+매핑 파이프라인: ID prefix 제거 → ID_SYNONYMS → ACCOUNT_NAME_SYNONYMS → CORE_MAP → accountMappings.json → 괄호 제거 재시도

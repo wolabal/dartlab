@@ -332,6 +332,7 @@ class TestProviderRegistry:
 # Status Integration
 # ══════════════════════════════════════
 
+@pytest.mark.skipif(not hasattr(__import__("dartlab"), "llm"), reason="dartlab.llm 미등록")
 class TestStatusIntegration:
 	def test_status_claude_code(self):
 		import dartlab
