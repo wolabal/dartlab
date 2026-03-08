@@ -1,6 +1,7 @@
 """CLI 기반 provider 테스트 — mock subprocess로 CLI 불필요."""
 
 import json
+import os
 import shutil
 import subprocess
 
@@ -9,11 +10,17 @@ from unittest.mock import patch, MagicMock
 
 from dartlab.engines.llmAnalyzer.types import LLMConfig
 
+_SKIP_CI = pytest.mark.skipif(
+	os.environ.get("CI") == "true" or os.environ.get("GITHUB_ACTIONS") == "true",
+	reason="CI 환경에서 CLI provider 테스트 불가",
+)
+
 
 # ══════════════════════════════════════
 # ClaudeCodeProvider
 # ══════════════════════════════════════
 
+@_SKIP_CI
 class TestClaudeCodeProvider:
 	def _make_provider(self, model=None):
 		from dartlab.engines.llmAnalyzer.providers.claude_code import ClaudeCodeProvider
@@ -151,6 +158,7 @@ class TestClaudeCodeProvider:
 # CodexProvider
 # ══════════════════════════════════════
 
+@_SKIP_CI
 class TestCodexProvider:
 	def _make_provider(self, model=None):
 		from dartlab.engines.llmAnalyzer.providers.codex import CodexProvider
