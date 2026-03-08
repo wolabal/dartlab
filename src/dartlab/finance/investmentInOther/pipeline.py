@@ -8,13 +8,16 @@ from dartlab.finance.investmentInOther.parser import parseInvestments
 from dartlab.finance.investmentInOther.types import InvestmentInOtherResult
 
 
-def _buildInvestmentDf(rows: list[dict]) -> pl.DataFrame | None:
+def _buildInvestmentDf(rows: list[dict], headers: list[str] | None = None) -> pl.DataFrame | None:
     if not rows:
         return None
     maxVals = max(len(r["values"]) for r in rows)
     data: dict[str, list] = {"name": [r["name"] for r in rows]}
     for i in range(maxVals):
-        data[f"v{i+1}"] = [
+        colName = headers[i] if headers and i < len(headers) else f"v{i+1}"
+        if colName in data:
+            colName = f"{colName}_{i+1}"
+        data[colName] = [
             r["values"][i] if i < len(r["values"]) else None for r in rows
         ]
     return pl.DataFrame(data)
@@ -42,13 +45,13 @@ def investmentInOther(stockCode: str) -> InvestmentInOtherResult | None:
                 if len(content) < 50:
                     continue
 
-                investments = parseInvestments(content)
+                investments, headers = parseInvestments(content)
                 if investments:
                     return InvestmentInOtherResult(
                         corpName=corpName,
                         nYears=1,
                         investments=investments,
-                        investmentDf=_buildInvestmentDf(investments),
+                        investmentDf=_buildInvestmentDf(investments, headers),
                     )
 
                 if "해당사항" in content[:500] or "없습니다" in content[:500]:

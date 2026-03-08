@@ -41,11 +41,16 @@ def parseAmount(text: str) -> int | None:
         return None
 
 
-def parseInvestments(content: str) -> list[dict]:
-    """타법인출자 현황 파싱."""
+def parseInvestments(content: str) -> tuple[list[dict], list[str]]:
+    """타법인출자 현황 파싱.
+
+    Returns:
+        (rows, headers) — rows: [{"name": str, "values": [int]}], headers: 숫자 컬럼 헤더
+    """
     lines = content.split("\n")
     results: list[dict] = []
     headerFound = False
+    numericHeaders: list[str] = []
 
     for line in lines:
         stripped = line.strip()
@@ -65,6 +70,13 @@ def parseInvestments(content: str) -> list[dict]:
             "지분" in c or "장부" in c or "취득" in c or "기초" in c or "기말" in c for c in cells
         ):
             headerFound = True
+            # 헤더에서 숫자 컬럼명 추출 (법인명 이후의 셀들)
+            nameIdx = 0
+            for i, c in enumerate(cells):
+                if "법인명" in c or "회사명" in c or "종목명" in c:
+                    nameIdx = i
+                    break
+            numericHeaders = [c.strip().replace(" ", "") for c in cells[nameIdx + 1:] if c.strip()]
             continue
 
         if not headerFound:
@@ -90,4 +102,4 @@ def parseInvestments(content: str) -> list[dict]:
 
         results.append({"name": name, "values": nums})
 
-    return results
+    return results, numericHeaders

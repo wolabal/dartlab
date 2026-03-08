@@ -44,6 +44,9 @@ _MODULE_REGISTRY: list[tuple[str, str, str, Any]] = [
     # 재무제표
     ("dartlab.finance.summary", "fsSummary", "요약재무정보", None),
     ("dartlab.finance.statements", "statements", "재무제표", None),
+    ("dartlab.finance.segment", "segments", "부문정보", lambda r: r.revenue),
+    ("dartlab.finance.tangibleAsset", "tangibleAsset", "유형자산", lambda r: r.movementDf),
+    ("dartlab.finance.costByNature", "costByNature", "비용성격별분류", lambda r: r.timeSeries),
     # 정기보고서
     ("dartlab.finance.dividend", "dividend", "배당", lambda r: r.timeSeries),
     ("dartlab.finance.majorHolder", "majorHolder", "최대주주", lambda r: r.timeSeries),

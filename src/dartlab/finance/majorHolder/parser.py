@@ -97,11 +97,14 @@ def parseMajorHolderTable(content: str) -> dict:
         isCommon = "보통주" in stockType or "의결권" in stockType
         if isMajor and isCommon and result["majorHolder"] is None:
             result["majorHolder"] = name
-            result["majorRatio"] = ratioEnd
+            if ratioEnd is not None and 0 < ratioEnd < 100:
+                result["majorRatio"] = ratioEnd
+            elif ratioStart is not None and 0 < ratioStart < 100:
+                result["majorRatio"] = ratioStart
 
     if result["majorHolder"] is None and result["holders"]:
         first = result["holders"][0]
-        if first["ratioEnd"] and first["ratioEnd"] > 0:
+        if first["ratioEnd"] and 0 < first["ratioEnd"] < 100:
             result["majorHolder"] = first["name"]
             result["majorRatio"] = first["ratioEnd"]
 
