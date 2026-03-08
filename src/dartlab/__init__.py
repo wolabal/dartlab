@@ -1,14 +1,34 @@
 """DART 공시 데이터 활용 라이브러리."""
 
-from dartlab import core, disclosure, finance
+import sys
+
+from dartlab import config, core, disclosure, finance
 from dartlab.company import Company
 from dartlab.core.kindList import codeToName, getKindList, nameToCode, searchName
 
+
+class _Module(sys.modules[__name__].__class__):
+    """dartlab.verbose 프록시."""
+
+    @property
+    def verbose(self):
+        return config.verbose
+
+    @verbose.setter
+    def verbose(self, value):
+        config.verbose = value
+
+
+sys.modules[__name__].__class__ = _Module
+
+
 __all__ = [
+    "config",
     "core",
     "finance",
     "disclosure",
     "Company",
+    "verbose",
     "getKindList",
     "codeToName",
     "nameToCode",

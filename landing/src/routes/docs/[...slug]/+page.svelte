@@ -203,12 +203,12 @@
 	.not-found h1 {
 		font-size: 4rem;
 		font-weight: 800;
-		background: linear-gradient(135deg, #f59e0b, #fbbf24);
+		background: linear-gradient(135deg, #ea4647, #f87171);
 		-webkit-background-clip: text;
 		-webkit-text-fill-color: transparent;
 	}
 	.not-found p { color: #a8a29e; margin: 1rem 0; }
-	.not-found a { color: #f59e0b; text-decoration: none; }
+	.not-found a { color: #ea4647; text-decoration: none; }
 
 	.doc-layout {
 		display: grid;

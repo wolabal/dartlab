@@ -47,9 +47,9 @@ class TestNotesDetail:
         assert "특수관계자" in NOTES_KEYWORDS
         assert "우발부채" in NOTES_KEYWORDS
 
-    def test_company_method(self):
+    def test_company_notes_access(self):
         from dartlab import Company
         c = Company(SAMSUNG)
-        r = c.notesDetail("차입금")
-        assert r is not None
-        assert r.keyword == "차입금"
+        df = c.notes["차입금"]
+        assert df is not None
+        assert isinstance(df, pl.DataFrame)

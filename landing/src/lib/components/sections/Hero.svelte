@@ -19,9 +19,9 @@
 			<img
 				src="{base}/avatar.png"
 				alt="DartLab mascot"
-				width="120"
-				height="120"
-				class="rounded-full drop-shadow-[0_0_24px_rgba(234,70,71,0.3)] hover:drop-shadow-[0_0_32px_rgba(234,70,71,0.5)] transition-all duration-300 hover:scale-105 animate-float"
+				width="180"
+				height="180"
+				class="drop-shadow-[0_0_32px_rgba(234,70,71,0.35)] hover:drop-shadow-[0_0_48px_rgba(234,70,71,0.55)] transition-all duration-300 hover:scale-105 animate-float"
 			/>
 		</div>
 

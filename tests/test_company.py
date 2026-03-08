@@ -15,10 +15,12 @@ class TestCompany:
         assert c.corpName == "삼성전자"
 
     def test_repr(self):
-        from dartlab import Company
-        c = Company(SAMSUNG)
+        import dartlab
+        dartlab.verbose = False
+        c = dartlab.Company(SAMSUNG)
         assert "005930" in repr(c)
         assert "삼성전자" in repr(c)
+        dartlab.verbose = True
 
     def test_docs(self):
         from dartlab import Company

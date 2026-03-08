@@ -1,4 +1,4 @@
-# dartlab API 스팩
+# dartlab API 스펙
 
 ## 공통 규칙
 
@@ -7,20 +7,30 @@
 - 반환 타입은 각 모듈의 Result dataclass 또는 None (데이터 부족 시)
 - 모든 Result는 `corpName` 필드를 공통으로 가진다
 - 시계열 모듈은 `nYears` (기간 수) 포함, 스냅샷 모듈은 `year` (기준연도) 포함
-- period 파라미터를 받는 모듈만 `period` 필드 포함
 
 ## 패키지 구조
 
 ```
 dartlab/
 ├── core/          # 데이터 로딩, 보고서 선택, 테이블 파싱
-├── finance/       # 정량 재무 데이터 (11개 모듈)
+├── finance/       # 정량 재무 데이터 (36개 모듈)
 ├── disclosure/    # 공시 서술형 섹션 (4개 모듈)
-└── company.py     # 통합 접근 래퍼
+├── company.py     # 통합 접근 래퍼 (property 기반)
+├── notes.py       # K-IFRS 주석 통합 접근
+└── config.py      # 전역 설정 (verbose)
 ```
 
 - `finance/` — 숫자·테이블 중심: 재무제표, 배당, 주주, 자본, 부문별 매출 등
 - `disclosure/` — 텍스트·서술 중심: 사업의 내용, 경영진단의견, 원재료, 회사의 개요 등
+
+## 전역 설정
+
+```python
+import dartlab
+dartlab.verbose = False   # 진행 표시 끄기 (기본 True)
+```
+
+---
 
 ## Company 클래스
 
@@ -32,8 +42,33 @@ c = Company("삼성전자")      # 회사명으로도 생성 가능
 c.corpName                  # "삼성전자"
 ```
 
-종목코드 하나로 15개 분석 모듈에 접근하는 통합 래퍼.
-각 메서드는 기존 pipeline 함수에 `stockCode`를 넘기는 얇은 래퍼다.
+종목코드 하나로 40개 분석 모듈에 접근하는 통합 래퍼.
+**property로 바로 DataFrame에 접근** (lazy 로딩 + 캐싱).
+
+### 사용 패턴
+
+```python
+c = Company("005930")
+
+# 1. property → 바로 DataFrame
+c.BS                        # 재무상태표
+c.dividend                  # 배당 시계열
+
+# 2. notes → K-IFRS 주석 (영문 속성 + 한글 딕셔너리)
+c.notes.inventory           # 재고자산
+c.notes["재고자산"]          # 동일
+
+# 3. all() → 전체 dict
+d = c.all()                 # {"BS": df, "dividend": df, "notes": {...}, ...}
+
+# 4. get() → 모듈 전체 Result 객체 (복수 DataFrame 접근)
+r = c.get("audit")          # AuditResult
+r.opinionDf                 # 감사의견
+r.feeDf                     # 감사보수
+
+# 5. fsSummary() → 파라미터가 있는 유일한 메서드
+r = c.fsSummary(period="q") # AnalysisResult
+```
 
 ### 인덱스·메타
 
@@ -46,59 +81,98 @@ c.corpName                  # "삼성전자"
 | `Company.codeName()` | stockCode | str \| None | 종목코드 → 회사명 변환 (static) |
 | `docs()` | - | DataFrame | 이 종목의 공시 문서 목록 + DART 뷰어 링크 |
 
-`status()` 반환 컬럼: `stockCode, corpName, rows, yearFrom, yearTo, nDocs`
-`docs()` 반환 컬럼: `year, reportType, rceptDate, rceptNo, dartUrl`
+### property — 재무제표
 
-### 분석 메서드 — finance
+| property | 반환 타입 | 설명 |
+|----------|-----------|------|
+| `BS` | DataFrame \| None | 재무상태표 |
+| `IS` | DataFrame \| None | 손익계산서 |
+| `CF` | DataFrame \| None | 현금흐름표 |
+
+### property — 정기보고서
+
+| property | 반환 타입 | 모듈 | 설명 |
+|----------|-----------|------|------|
+| `dividend` | DataFrame | dividend | 배당 시계열 |
+| `majorHolder` | DataFrame | majorHolder | 최대주주 시계열 |
+| `employee` | DataFrame | employee | 직원 현황 시계열 |
+| `subsidiary` | DataFrame | subsidiary | 자회사 투자 시계열 |
+| `bond` | DataFrame | bond | 채무증권 시계열 |
+| `shareCapital` | DataFrame | shareCapital | 주식 현황 시계열 |
+| `executive` | DataFrame | executive | 등기임원 시계열 |
+| `executivePay` | DataFrame | executivePay | 임원 보수 시계열 |
+| `audit` | DataFrame | audit | 감사의견 시계열 |
+| `boardOfDirectors` | DataFrame | boardOfDirectors | 이사회 시계열 |
+| `capitalChange` | DataFrame | capitalChange | 자본금 변동 시계열 |
+| `contingentLiability` | DataFrame | contingentLiability | 우발부채 시계열 |
+| `internalControl` | DataFrame | internalControl | 내부통제 시계열 |
+| `relatedPartyTx` | DataFrame | relatedPartyTx | 관계자거래 시계열 |
+| `rnd` | DataFrame | rnd | R&D 비용 시계열 |
+| `sanction` | DataFrame | sanction | 제재 현황 |
+| `affiliateGroup` | DataFrame | affiliateGroup | 계열사 목록 |
+| `fundraising` | DataFrame | fundraising | 증자/감자 이력 |
+| `productService` | DataFrame | productService | 주요 제품/서비스 |
+| `salesOrder` | DataFrame | salesOrder | 매출/수주 |
+| `riskDerivative` | DataFrame | riskDerivative | 위험관리/파생거래 |
+| `articlesOfIncorporation` | DataFrame | articlesOfIncorporation | 정관 변경이력 |
+| `otherFinance` | DataFrame | otherFinance | 기타 재무 |
+| `companyHistory` | DataFrame | companyHistory | 회사 연혁 |
+| `shareholderMeeting` | DataFrame | shareholderMeeting | 주주총회 안건 |
+| `auditSystem` | DataFrame | auditSystem | 감사제도 |
+| `investmentInOther` | DataFrame | investmentInOther | 타법인출자 |
+| `companyOverviewDetail` | dict | companyOverviewDetail | 회사 개요 상세 |
+| `holderOverview` | HolderOverview | majorHolder | 5% 주주·소액주주·의결권 |
+
+### property — 공시 서술
+
+| property | 반환 타입 | 모듈 | 설명 |
+|----------|-----------|------|------|
+| `business` | list | business | 사업의 내용 섹션 목록 |
+| `overview` | OverviewResult | companyOverview | 회사 개요 정량 |
+| `mdna` | str | mdna | MD&A 개요 텍스트 |
+| `rawMaterial` | RawMaterialResult | rawMaterial | 원재료/설비 |
+
+### notes — K-IFRS 주석
+
+```python
+c.notes.receivables           # 매출채권
+c.notes.inventory             # 재고자산
+c.notes.tangibleAsset         # 유형자산
+c.notes.intangibleAsset       # 무형자산
+c.notes.investmentProperty    # 투자부동산
+c.notes.affiliates            # 관계기업
+c.notes.borrowings            # 차입금
+c.notes.provisions            # 충당부채
+c.notes.eps                   # 주당이익
+c.notes.lease                 # 리스
+c.notes.segments              # 부문정보
+c.notes.costByNature          # 비용의성격별분류
+
+c.notes["재고자산"]            # 한글 키로도 접근 가능
+c.notes.keys()                # 영문 속성명 목록
+c.notes.keys_kr()             # 한글 키워드 목록
+c.notes.all()                 # 전체 dict
+```
+
+### 메서드
 
 | 메서드 | 파라미터 | 반환 타입 | 설명 |
 |--------|----------|-----------|------|
-| `fsSummary()` | ifrsOnly, period | AnalysisResult | 요약재무정보 + 브릿지 매칭 + 전환점 |
-| `statements()` | ifrsOnly, period | StatementsResult | BS·IS·CF 시계열 |
-| `segments()` | period | SegmentsResult | 부문별 보고 |
-| `costByNature()` | period | CostByNatureResult | 비용의 성격별 분류 |
-| `majorHolder()` | - | MajorHolderResult | 최대주주 현황 시계열 |
-| `holderOverview()` | - | HolderOverview | 5% 주주·소액주주·의결권 |
-| `shareCapital()` | - | ShareCapitalResult | 발행·자기·유통 주식 |
-| `dividend()` | - | DividendResult | 배당 시계열 |
-| `employee()` | - | EmployeeResult | 직원 현황 시계열 |
-| `subsidiary()` | - | SubsidiaryResult | 타법인출자 현황 |
-| `bond()` | - | BondResult | 채무증권 발행실적 |
-| `affiliates()` | period | AffiliatesResult | 관계기업 투자 |
-
-### 분석 메서드 — disclosure
-
-| 메서드 | 파라미터 | 반환 타입 | 설명 |
-|--------|----------|-----------|------|
-| `business()` | - | BusinessResult | 사업의 내용 섹션 + 변경 탐지 |
-| `overview()` | - | OverviewResult | 회사의 개요 정량 데이터 |
-| `mdna()` | - | MdnaResult | 경영진단 및 분석의견 |
-| `rawMaterial()` | - | RawMaterialResult | 원재료·유형자산·시설투자 |
-
-모든 메서드는 데이터 부족 시 `None`을 반환한다.
+| `fsSummary()` | ifrsOnly, period | AnalysisResult | 요약재무정보 + 브릿지 매칭 |
+| `all()` | - | dict | 전체 데이터 dict (progress bar 포함) |
+| `get(name)` | name, **kwargs | Result 객체 | 모듈 전체 Result 접근 |
+| `docs()` | - | DataFrame | 공시 문서 목록 |
 
 ---
 
 ## finance 모듈
 
-### finance.summary
+### finance.summary — fsSummary
 
 ```python
 from dartlab.finance.summary import fsSummary
-
-result = fsSummary("005930")
 result = fsSummary("005930", ifrsOnly=True, period="y")
 ```
-
-#### fsSummary(stockCode, ifrsOnly=True, period="y") -> AnalysisResult | None
-
-요약재무정보 시계열 추출 + 브릿지 매칭 + 전환점 탐지.
-
-| 파라미터 | 타입 | 기본값 | 설명 |
-|----------|------|--------|------|
-| stockCode | str | - | 종목코드 (6자리) |
-| ifrsOnly | bool | True | K-IFRS 이후(2011~)만 분석 |
-| period | str | "y" | "y" (연간) \| "q" (분기) \| "h" (반기) |
 
 #### AnalysisResult
 
@@ -119,20 +193,8 @@ result = fsSummary("005930", ifrsOnly=True, period="y")
 
 ```python
 from dartlab.finance.statements import statements
-
-result = statements("005930")
 result = statements("005930", ifrsOnly=True, period="y")
 ```
-
-#### statements(stockCode, ifrsOnly=True, period="y") -> StatementsResult | None
-
-연결재무제표에서 BS, IS, CF 시계열 DataFrame 추출.
-
-| 파라미터 | 타입 | 기본값 | 설명 |
-|----------|------|--------|------|
-| stockCode | str | - | 종목코드 (6자리) |
-| ifrsOnly | bool | True | K-IFRS 이후(2011~)만 |
-| period | str | "y" | "y" \| "q" \| "h" |
 
 #### StatementsResult
 
@@ -145,78 +207,7 @@ result = statements("005930", ifrsOnly=True, period="y")
 | IS | DataFrame \| None | 손익계산서 |
 | CF | DataFrame \| None | 현금흐름표 |
 
-### finance.segment
-
-```python
-from dartlab.finance.segment import segments
-
-result = segments("005930")
-result = segments("005930", period="y")
-```
-
-#### segments(stockCode, period="y") -> SegmentsResult | None
-
-연결재무제표 주석에서 부문별 보고 데이터 추출.
-
-| 파라미터 | 타입 | 기본값 | 설명 |
-|----------|------|--------|------|
-| stockCode | str | - | 종목코드 (6자리) |
-| period | str | "y" | "y" \| "q" \| "h" |
-
-#### SegmentsResult
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| corpName | str \| None | 기업명 |
-| nYears | int | 연도 수 |
-| period | str | "y" \| "q" \| "h" |
-| tables | dict[str, list[SegmentTable]] | {year: [tables]} |
-| revenue | DataFrame \| None | 부문별 매출 시계열 |
-
-### finance.affiliate
-
-```python
-from dartlab.finance.affiliate import affiliates
-
-result = affiliates("005930")
-result = affiliates("005930", period="y")
-```
-
-#### affiliates(stockCode, period="y") -> AffiliatesResult | None
-
-연결재무제표 주석에서 관계기업/공동기업 투자 데이터 추출.
-
-| 파라미터 | 타입 | 기본값 | 설명 |
-|----------|------|--------|------|
-| stockCode | str | - | 종목코드 (6자리) |
-| period | str | "y" | "y" \| "q" \| "h" |
-
-#### AffiliatesResult
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| corpName | str \| None | 기업명 |
-| nYears | int | 연도 수 |
-| period | str | "y" \| "q" \| "h" |
-| profiles | dict[str, list[AffiliateProfile]] | {year: [profiles]} |
-| movements | dict[str, list[AffiliateMovement]] | {year: [movements]} |
-| movementDf | DataFrame \| None | 기업별 변동 시계열 |
-
 ### finance.dividend
-
-```python
-from dartlab.finance.dividend import dividend
-
-result = dividend("005930")
-```
-
-#### dividend(stockCode) -> DividendResult | None
-
-사업보고서 "배당에 관한 사항"에서 배당지표 시계열 추출.
-
-| 파라미터 | 타입 | 기본값 | 설명 |
-|----------|------|--------|------|
-| stockCode | str | - | 종목코드 (6자리) |
 
 #### DividendResult
 
@@ -224,44 +215,9 @@ result = dividend("005930")
 |------|------|------|
 | corpName | str \| None | 기업명 |
 | nYears | int | 연도 수 |
-| timeSeries | DataFrame \| None | 배당 시계열 (year, netIncome, eps, totalDividend, payoutRatio, dividendYield, dps, dpsPreferred) |
-
-### finance.employee
-
-```python
-from dartlab.finance.employee import employee
-
-result = employee("005930")
-```
-
-#### employee(stockCode) -> EmployeeResult | None
-
-사업보고서 "직원 등의 현황"에서 직원 현황 시계열 추출.
-
-| 파라미터 | 타입 | 기본값 | 설명 |
-|----------|------|--------|------|
-| stockCode | str | - | 종목코드 (6자리) |
-
-#### EmployeeResult
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| corpName | str \| None | 기업명 |
-| nYears | int | 연도 수 |
-| timeSeries | DataFrame \| None | 직원 시계열 (year, totalEmployees, avgTenure, totalSalary, avgSalary) |
+| timeSeries | DataFrame \| None | year, netIncome, eps, totalDividend, payoutRatio, dividendYield, dps, dpsPreferred |
 
 ### finance.majorHolder
-
-```python
-from dartlab.finance.majorHolder import majorHolder, holderOverview
-
-result = majorHolder("005930")
-overview = holderOverview("005930")
-```
-
-#### majorHolder(stockCode) -> MajorHolderResult | None
-
-사업보고서 "주주에 관한 사항"에서 최대주주 현황 시계열 추출.
 
 #### MajorHolderResult
 
@@ -269,15 +225,11 @@ overview = holderOverview("005930")
 |------|------|------|
 | corpName | str \| None | 기업명 |
 | nYears | int | 연도 수 |
-| majorHolder | str \| None | 최대주주명 (최신) |
-| majorRatio | float \| None | 최대주주 보통주 지분율 (%) |
+| majorHolder | str \| None | 최대주주명 |
+| majorRatio | float \| None | 최대주주 지분율 (%) |
 | totalRatio | float \| None | 특수관계인 합계 지분율 (%) |
-| holders | list[Holder] | 최신 연도 특수관계인 목록 |
-| timeSeries | DataFrame \| None | 최대주주 시계열 (year, majorHolder, majorRatio, totalRatio, holderCount) |
-
-#### holderOverview(stockCode) -> HolderOverview | None
-
-사업보고서에서 5% 이상 주주, 소액주주, 의결권 현황 추출.
+| holders | list[Holder] | 특수관계인 목록 |
+| timeSeries | DataFrame \| None | year, majorHolder, majorRatio, totalRatio, holderCount |
 
 #### HolderOverview
 
@@ -285,64 +237,21 @@ overview = holderOverview("005930")
 |------|------|------|
 | corpName | str \| None | 기업명 |
 | year | int \| None | 기준 사업연도 |
-| bigHolders | list[BigHolder] | 5% 이상 주주 (name, shares, ratio) |
+| bigHolders | list[BigHolder] | 5% 이상 주주 |
 | minority | Minority \| None | 소액주주 현황 |
 | voting | VotingRights \| None | 의결권 현황 |
 
-#### Minority
+### finance.employee
+
+#### EmployeeResult
 
 | 필드 | 타입 | 설명 |
 |------|------|------|
-| holders | int | 소액주주 수 |
-| totalHolders | int | 전체 주주 수 |
-| holderPct | float | 소액주주 비율 (%) |
-| shares | int | 소액주주 보유 주식수 |
-| totalShares | int | 총 발행주식수 |
-| sharePct | float | 소액주주 주식 비율 (%) |
-
-#### VotingRights
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| issuedCommon/Pref | float \| None | 발행주식총수 |
-| noVoteCommon/Pref | float \| None | 의결권 없는 주식수 |
-| excludedCommon/Pref | float \| None | 정관에 의한 배제 |
-| restrictedCommon/Pref | float \| None | 법률에 의한 제한 |
-| restoredCommon/Pref | float \| None | 의결권 부활 |
-| votableCommon/Pref | float \| None | 의결권 행사 가능 주식수 |
+| corpName | str \| None | 기업명 |
+| nYears | int | 연도 수 |
+| timeSeries | DataFrame \| None | year, totalEmployees, avgTenure, totalSalary, avgSalary |
 
 ### finance.subsidiary
-
-```python
-from dartlab.finance.subsidiary import subsidiary
-
-result = subsidiary("005930")
-```
-
-#### subsidiary(stockCode) -> SubsidiaryResult | None
-
-사업보고서 "타법인출자 현황(상세)"에서 자회사/투자 포트폴리오 데이터 추출.
-
-#### SubsidiaryInvestment
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| name | str | 법인명 |
-| listed | str \| None | 상장여부 ("상장" / "비상장") |
-| firstAcquired | str \| None | 최초취득일자 |
-| purpose | str \| None | 출자목적 ("경영참여" / "단순투자" 등) |
-| firstAmount | float \| None | 최초취득금액 |
-| beginShares | float \| None | 기초 수량 |
-| beginRatio | float \| None | 기초 지분율 (%) |
-| beginBook | float \| None | 기초 장부가액 |
-| acquiredShares | float \| None | 취득(처분) 수량 |
-| acquiredAmount | float \| None | 취득(처분) 금액 |
-| valuationGain | float \| None | 평가손익 |
-| endShares | float \| None | 기말 수량 |
-| endRatio | float \| None | 기말 지분율 (%) |
-| endBook | float \| None | 기말 장부가액 |
-| totalAssets | float \| None | 피투자법인 총자산 |
-| netIncome | float \| None | 피투자법인 당기순손익 |
 
 #### SubsidiaryResult
 
@@ -351,61 +260,9 @@ result = subsidiary("005930")
 | corpName | str \| None | 기업명 |
 | nYears | int | 연도 수 |
 | investments | list[SubsidiaryInvestment] | 최신 연도 투자 목록 |
-| timeSeries | DataFrame \| None | 투자 시계열 (year, totalCount, listedCount, unlistedCount, totalBook) |
-
-### finance.shareCapital
-
-```python
-from dartlab.finance.shareCapital import shareCapital
-
-result = shareCapital("005930")
-```
-
-#### shareCapital(stockCode) -> ShareCapitalResult | None
-
-사업보고서 "주식의 총수 등"에서 발행주식/자기주식/유통주식 데이터 추출.
-
-#### ShareCapitalResult
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| corpName | str \| None | 기업명 |
-| nYears | int | 연도 수 |
-| authorizedShares | float \| None | 발행할 주식의 총수 (정관) |
-| issuedShares | float \| None | 현재까지 발행한 주식의 총수 |
-| retiredShares | float \| None | 현재까지 감소한 주식의 총수 |
-| outstandingShares | float \| None | 발행주식의 총수 (보통주 기준) |
-| treasuryShares | float \| None | 자기주식수 |
-| floatingShares | float \| None | 유통주식수 |
-| treasuryRatio | float \| None | 자기주식 보유비율 (%) |
-| timeSeries | DataFrame \| None | 주식 시계열 (year, outstandingShares, treasuryShares, floatingShares, treasuryRatio) |
+| timeSeries | DataFrame \| None | year, totalCount, listedCount, unlistedCount, totalBook |
 
 ### finance.bond
-
-```python
-from dartlab.finance.bond import bond
-
-result = bond("005930")
-```
-
-#### bond(stockCode) -> BondResult | None
-
-사업보고서 "증권의 발행을 통한 자금조달에 관한 사항"에서 채무증권 발행실적 추출.
-
-#### BondIssuance
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| issuer | str | 발행회사 |
-| bondType | str \| None | 증권종류 |
-| method | str \| None | 발행방법 |
-| issueDate | str \| None | 발행일자 |
-| amount | float \| None | 권면총액 |
-| interestRate | str \| None | 이자율 |
-| rating | str \| None | 평가등급 |
-| maturityDate | str \| None | 만기일 |
-| redeemed | str \| None | 상환여부 |
-| underwriter | str \| None | 주관회사 |
 
 #### BondResult
 
@@ -414,25 +271,309 @@ result = bond("005930")
 | corpName | str \| None | 기업명 |
 | nYears | int | 연도 수 |
 | issuances | list[BondIssuance] | 최신 연도 채무증권 목록 |
-| timeSeries | DataFrame \| None | 채무증권 시계열 (year, totalIssuances, totalAmount, unredeemedCount) |
+| timeSeries | DataFrame \| None | year, totalIssuances, totalAmount, unredeemedCount |
 
-### finance.costByNature
+### finance.shareCapital
+
+#### ShareCapitalResult
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| corpName | str \| None | 기업명 |
+| nYears | int | 연도 수 |
+| authorizedShares | float \| None | 발행할 주식의 총수 |
+| outstandingShares | float \| None | 발행주식의 총수 |
+| treasuryShares | float \| None | 자기주식수 |
+| floatingShares | float \| None | 유통주식수 |
+| timeSeries | DataFrame \| None | year, outstandingShares, treasuryShares, floatingShares, treasuryRatio |
+
+### finance.audit
+
+#### AuditResult
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| corpName | str \| None | 기업명 |
+| nYears | int | 연도 수 |
+| opinionDf | DataFrame \| None | year, auditor, opinion, keyAuditMatters |
+| feeDf | DataFrame \| None | year, auditor, contractFee, contractHours, actualFee, actualHours |
+
+### finance.executive
+
+#### ExecutiveResult
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| corpName | str \| None | 기업명 |
+| nYears | int | 연도 수 |
+| executiveDf | DataFrame \| None | year, totalRegistered, insideDirectors, outsideDirectors, ... |
+| unregPayDf | DataFrame \| None | year, headcount, totalSalary, avgSalary |
+
+### finance.executivePay
+
+#### ExecutivePayResult
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| corpName | str \| None | 기업명 |
+| nYears | int | 연도 수 |
+| payByTypeDf | DataFrame \| None | year, category, headcount, totalPay, avgPay |
+| topPayDf | DataFrame \| None | year, name, position, totalPay |
+
+### finance.boardOfDirectors
+
+#### BoardResult
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| corpName | str \| None | 기업명 |
+| nYears | int | 연도 수 |
+| boardDf | DataFrame \| None | year, totalDirectors, outsideDirectors, meetingCount, avgAttendanceRate |
+| committeeDf | DataFrame \| None | year, committeeName, composition, members |
+
+### finance.capitalChange
+
+#### CapitalChangeResult
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| corpName | str \| None | 기업명 |
+| nYears | int | 연도 수 |
+| capitalDf | DataFrame \| None | year, commonShares, preferredShares, commonCapital, ... |
+| shareTotalDf | DataFrame \| None | year, authorizedTotal, issuedTotal, outstandingTotal, ... |
+| treasuryDf | DataFrame \| None | year, totalBegin, totalEnd |
+
+### finance.contingentLiability
+
+#### ContingentLiabilityResult
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| corpName | str \| None | 기업명 |
+| nYears | int | 연도 수 |
+| guaranteeDf | DataFrame \| None | year, totalGuaranteeAmount, lineCount |
+| lawsuitDf | DataFrame \| None | year, filingDate, parties, description, amount, status |
+
+### finance.internalControl
+
+#### InternalControlResult
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| corpName | str \| None | 기업명 |
+| nYears | int | 연도 수 |
+| controlDf | DataFrame \| None | year, period, opinion, auditor, hasWeakness |
+
+### finance.relatedPartyTx
+
+#### RelatedPartyTxResult
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| corpName | str \| None | 기업명 |
+| nYears | int | 연도 수 |
+| guaranteeDf | DataFrame \| None | year, entity, relationship, amount |
+| assetTxDf | DataFrame \| None | year, entity, txType, amount |
+| revenueTxDf | DataFrame \| None | year, entity, sales, purchases |
+
+### finance.rnd
+
+#### RndResult
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| corpName | str \| None | 기업명 |
+| nYears | int | 연도 수 |
+| rndDf | DataFrame \| None | year, rndExpense, revenueRatio |
+
+### finance.sanction
+
+#### SanctionResult
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| corpName | str \| None | 기업명 |
+| nYears | int | 연도 수 |
+| sanctionDf | DataFrame \| None | year, date, agency, subject, action, amount, reason |
+
+### finance.affiliateGroup
+
+#### AffiliateGroupResult
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| corpName | str \| None | 기업명 |
+| groupName | str \| None | 기업집단명 |
+| totalCount | int \| None | 계열사 수 |
+| affiliateDf | DataFrame \| None | name, listed |
+
+### finance.fundraising
+
+#### FundraisingResult
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| corpName | str \| None | 기업명 |
+| noData | bool | 발행 실적 없음 |
+| issuanceDf | DataFrame \| None | date, issueType, stockType, quantity, parValue, issuePrice, note |
+
+### finance.productService
+
+#### ProductServiceResult
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| corpName | str \| None | 기업명 |
+| unit | str | 단위 (백만원) |
+| productDf | DataFrame \| None | label, amount, ratio |
+
+### finance.salesOrder
+
+#### SalesOrderResult
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| corpName | str \| None | 기업명 |
+| salesDf | DataFrame \| None | 매출 현황 |
+| orderDf | DataFrame \| None | 수주 현황 |
+
+### finance.riskDerivative
+
+#### RiskDerivativeResult
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| corpName | str \| None | 기업명 |
+| fxDf | DataFrame \| None | currency, upImpact, downImpact |
+| derivativeDf | DataFrame \| None | 파생상품 현황 |
+
+### finance.articlesOfIncorporation
+
+#### ArticlesResult
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| corpName | str \| None | 기업명 |
+| changesDf | DataFrame \| None | 정관 변경이력 |
+| purposesDf | DataFrame \| None | 사업 목적 |
+
+### finance.otherFinance
+
+#### OtherFinanceResult
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| corpName | str \| None | 기업명 |
+| badDebtDf | DataFrame \| None | 대손충당금 |
+| inventoryDf | DataFrame \| None | 재고자산 현황 |
+
+### finance.companyHistory
+
+#### CompanyHistoryResult
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| corpName | str \| None | 기업명 |
+| events | list[dict] | 연혁 이벤트 목록 |
+| eventsDf | DataFrame \| None | 연혁 DataFrame |
+
+### finance.shareholderMeeting
+
+#### ShareholderMeetingResult
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| corpName | str \| None | 기업명 |
+| agendas | list[dict] | 안건 목록 |
+| agendaDf | DataFrame \| None | 안건 DataFrame |
+
+### finance.auditSystem
+
+#### AuditSystemResult
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| corpName | str \| None | 기업명 |
+| committeeDf | DataFrame \| None | 감사위원회 구성 |
+| activityDf | DataFrame \| None | 감사 활동 내역 |
+
+### finance.investmentInOther
+
+#### InvestmentInOtherResult
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| corpName | str \| None | 기업명 |
+| investments | list[dict] | 투자 목록 |
+| investmentDf | DataFrame \| None | 투자 현황 DataFrame |
+
+### finance.companyOverviewDetail
+
+#### CompanyOverviewDetailResult
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| corpName | str \| None | 기업명 |
+| foundedDate | str \| None | 설립일 |
+| listedDate | str \| None | 상장일 |
+| address | str \| None | 본사 주소 |
+| ceo | str \| None | 대표이사 |
+| mainBusiness | str \| None | 주요 사업 |
+| website | str \| None | 홈페이지 |
+
+### finance.notesDetail
 
 ```python
-from dartlab.finance.costByNature import costByNature
-
-result = costByNature("005930")
-result = costByNature("005930", period="y")
+from dartlab.finance.notesDetail import notesDetail
+result = notesDetail("005930", keyword="재고자산")
 ```
 
-#### costByNature(stockCode, period="y") -> CostByNatureResult | None
+#### NotesDetailResult
 
-연결재무제표 주석에서 비용의 성격별 분류 시계열 추출.
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| corpName | str \| None | 기업명 |
+| keyword | str | 검색 키워드 |
+| nYears | int | 연도 수 |
+| tableDf | DataFrame \| None | 주석 시계열 (항목, 연도별 금액) |
 
-| 파라미터 | 타입 | 기본값 | 설명 |
-|----------|------|--------|------|
-| stockCode | str | - | 종목코드 (6자리) |
-| period | str | "y" | "y" (연간) \| "q" (분기) \| "h" (반기) |
+지원 키워드 (23개): 재고자산, 매출채권, 무형자산, 차입금, 충당부채, 주당이익, 리스, 투자부동산, 특수관계자, 우발부채, ...
+
+### finance.tangibleAsset
+
+#### TangibleAssetResult
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| corpName | str \| None | 기업명 |
+| nYears | int | 연도 수 |
+| reliability | str | "high" \| "low" |
+| movementDf | DataFrame \| None | 유형자산 변동 시계열 |
+
+### finance.segment
+
+#### SegmentsResult
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| corpName | str \| None | 기업명 |
+| nYears | int | 연도 수 |
+| tables | dict | {year: [SegmentTable]} |
+| revenue | DataFrame \| None | 부문별 매출 시계열 |
+
+### finance.affiliate
+
+#### AffiliatesResult
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| corpName | str \| None | 기업명 |
+| nYears | int | 연도 수 |
+| profiles | dict | {year: [AffiliateProfile]} |
+| movements | dict | {year: [AffiliateMovement]} |
+| movementDf | DataFrame \| None | 기업별 변동 시계열 |
+
+### finance.costByNature
 
 #### CostByNatureResult
 
@@ -441,8 +582,8 @@ result = costByNature("005930", period="y")
 | corpName | str \| None | 기업명 |
 | nYears | int | 기간 수 |
 | timeSeries | DataFrame \| None | 비용 시계열 (account, 연도별 금액) |
-| crossCheck | dict | 교차검증 결과 {연도: {matches, mismatches}} |
-| ratios | DataFrame \| None | 비용 구성비 (year, account, amount, ratio) |
+| crossCheck | dict | 교차검증 결과 |
+| ratios | DataFrame \| None | 비용 구성비 |
 
 ---
 
@@ -450,70 +591,16 @@ result = costByNature("005930", period="y")
 
 ### disclosure.business
 
-```python
-from dartlab.disclosure.business import business
-
-result = business("005930")
-```
-
-#### business(stockCode) -> BusinessResult | None
-
-사업보고서 "II. 사업의 내용"에서 하위 섹션 추출 + 연도별 변경 탐지.
-
-| 파라미터 | 타입 | 기본값 | 설명 |
-|----------|------|--------|------|
-| stockCode | str | - | 종목코드 (6자리) |
-
-#### BusinessSection
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| key | str | 분류 키 (overview, products, materials, sales, risk, rnd, etc, financial) |
-| title | str | 원본 섹션 제목 |
-| chars | int | 텍스트 길이 |
-| text | str | 섹션 전체 내용 |
-
-#### BusinessChange
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| year | int | 변경 감지 연도 |
-| changedPct | float | 변경률 (%) — 30 초과 시 유의미한 변화 |
-| added | int | 추가된 줄 수 |
-| removed | int | 삭제된 줄 수 |
-| totalChars | int | 해당 연도 텍스트 총 길이 |
-
 #### BusinessResult
 
 | 필드 | 타입 | 설명 |
 |------|------|------|
 | corpName | str \| None | 기업명 |
-| year | int | 기준 사업연도 (최신) |
+| year | int | 기준 사업연도 |
 | sections | list[BusinessSection] | 하위 섹션 목록 |
 | changes | list[BusinessChange] | 연도별 변경 정보 |
 
 ### disclosure.companyOverview
-
-```python
-from dartlab.disclosure.companyOverview import companyOverview
-
-result = companyOverview("005930")
-```
-
-#### companyOverview(stockCode) -> OverviewResult | None
-
-사업보고서 "I. 회사의 개요" → "1. 회사의 개요"에서 정량 데이터 추출.
-
-| 파라미터 | 타입 | 기본값 | 설명 |
-|----------|------|--------|------|
-| stockCode | str | - | 종목코드 (6자리) |
-
-#### CreditRating
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| agency | str | 평가기관 (한국신용평가, Moody's 등) |
-| grade | str | 신용등급 (AA+, Aa2 등) |
 
 #### OverviewResult
 
@@ -521,42 +608,13 @@ result = companyOverview("005930")
 |------|------|------|
 | corpName | str \| None | 기업명 |
 | year | int | 기준 사업연도 |
-| founded | str \| None | 설립일자 (YYYY-MM-DD) |
+| founded | str \| None | 설립일자 |
 | address | str \| None | 본사 주소 |
-| homepage | str \| None | 홈페이지 URL |
-| subsidiaryCount | int \| None | 연결대상 종속기업 수 |
-| isSME | bool \| None | 중소기업 해당 여부 |
-| isVenture | bool \| None | 벤처기업 해당 여부 |
+| homepage | str \| None | 홈페이지 |
+| subsidiaryCount | int \| None | 종속기업 수 |
 | creditRatings | list[CreditRating] | 신용등급 목록 |
-| listedDate | str \| None | 상장일 (YYYY-MM-DD) |
-| missing | list[str] | 원문에 해당 항목이 없는 필드 |
-| failed | list[str] | 항목은 있지만 파싱 실패한 필드 |
 
 ### disclosure.mdna
-
-```python
-from dartlab.disclosure.mdna import mdna
-
-result = mdna("005930")
-```
-
-#### mdna(stockCode) -> MdnaResult | None
-
-사업보고서 "이사의 경영진단 및 분석의견"에서 MD&A 텍스트 추출.
-
-| 파라미터 | 타입 | 기본값 | 설명 |
-|----------|------|--------|------|
-| stockCode | str | - | 종목코드 (6자리) |
-
-#### MdnaSection
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| title | str | 섹션 제목 (예: "2. 개요") |
-| category | str | 분류 (overview, forecast, financials, liquidity, offBalance, other, ...) |
-| text | str | 섹션 전체 내용 |
-| textLines | int | 텍스트 줄 수 |
-| tableLines | int | 테이블 줄 수 |
 
 #### MdnaResult
 
@@ -564,24 +622,10 @@ result = mdna("005930")
 |------|------|------|
 | corpName | str \| None | 기업명 |
 | nYears | int | 연도 수 |
-| sections | list[MdnaSection] | 최신 연도 섹션 목록 |
-| overview | str \| None | 개요 텍스트 (테이블 제외) |
+| sections | list[MdnaSection] | 섹션 목록 |
+| overview | str \| None | 개요 텍스트 |
 
 ### disclosure.rawMaterial
-
-```python
-from dartlab.disclosure.rawMaterial import rawMaterial
-
-result = rawMaterial("005930")
-```
-
-#### rawMaterial(stockCode) -> RawMaterialResult | None
-
-사업보고서 "원재료 및 생산설비" 섹션에서 원재료 매입, 유형자산, 시설투자 추출.
-
-| 파라미터 | 타입 | 기본값 | 설명 |
-|----------|------|--------|------|
-| stockCode | str | - | 종목코드 (6자리) |
 
 #### RawMaterialResult
 
@@ -589,36 +633,6 @@ result = rawMaterial("005930")
 |------|------|------|
 | corpName | str \| None | 기업명 |
 | year | int \| None | 기준 사업연도 |
-| materials | list[RawMaterial] | 원재료 매입 항목 목록 |
+| materials | list[RawMaterial] | 원재료 매입 항목 |
 | equipment | Equipment \| None | 유형자산 기말잔액 |
-| capexItems | list[CapexItem] | 시설투자 항목 목록 |
-
-#### RawMaterial
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| segment | str \| None | 사업부문 |
-| item | str \| None | 품목명 |
-| usage | str \| None | 용도 |
-| amount | float \| None | 매입액 |
-| ratio | float \| None | 비율 (%) |
-| supplier | str \| None | 매입처/비고 |
-
-#### Equipment
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| land | float \| None | 토지 |
-| buildings | float \| None | 건물/구축물 |
-| machinery | float \| None | 기계장치 |
-| construction | float \| None | 건설중인자산 |
-| total | float \| None | 합계 |
-| depreciation | float \| None | 감가상각비 |
-| capex | float \| None | 자본적지출 |
-
-#### CapexItem
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| segment | str | 구분/사업부문 |
-| amount | float | 투자금액 |
+| capexItems | list[CapexItem] | 시설투자 항목 |
