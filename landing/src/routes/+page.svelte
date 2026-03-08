@@ -25,15 +25,15 @@
 	<meta property="og:description" content="Comprehensive DART disclosure analysis. Parses financial statements, annual reports, and audit opinions into time-series DataFrames. Open-source Python library." />
 	<meta property="og:url" content="https://eddmpython.github.io/dartlab/" />
 	<meta property="og:site_name" content="DartLab" />
-	<meta property="og:image" content="https://eddmpython.github.io/dartlab/icon-512.png" />
-	<meta property="og:image:width" content="512" />
-	<meta property="og:image:height" content="512" />
+	<meta property="og:image" content="https://eddmpython.github.io/dartlab/og-image.png" />
+	<meta property="og:image:width" content="922" />
+	<meta property="og:image:height" content="583" />
 	<meta property="og:locale" content="en_US" />
 
-	<meta name="twitter:card" content="summary" />
+	<meta name="twitter:card" content="summary_large_image" />
 	<meta name="twitter:title" content="DartLab — {brand.description}" />
 	<meta name="twitter:description" content="Comprehensive DART disclosure analysis. Financial statements to audit opinions. 260+ listed companies." />
-	<meta name="twitter:image" content="https://eddmpython.github.io/dartlab/icon-512.png" />
+	<meta name="twitter:image" content="https://eddmpython.github.io/dartlab/og-image.png" />
 
 	{@html `<script type="application/ld+json">${JSON.stringify({
 		"@context": "https://schema.org",
