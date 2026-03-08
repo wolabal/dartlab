@@ -458,11 +458,11 @@
 		opacity: 1;
 	}
 
-	/* ToC */
+	/* ToC — positioned outside the 1060px content column */
 	.blog-toc {
 		position: fixed;
 		top: 72px;
-		right: calc((100vw - 1280px) / 2 + 1.5rem);
+		left: calc(50% + 530px + 2rem);
 		width: 200px;
 		max-height: calc(100vh - 90px);
 		overflow-y: auto;
