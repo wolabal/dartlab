@@ -20,7 +20,11 @@ export const navigation: NavItem[] = [
 			{ title: 'Overview', href: '/docs/api/overview' },
 			{ title: 'finance.summary', href: '/docs/api/finance-summary' },
 			{ title: 'finance.statements', href: '/docs/api/finance-statements' },
-			{ title: 'All Modules', href: '/docs/api/finance-others' }
+			{ title: 'All Modules', href: '/docs/api/finance-others' },
+			{ title: '계정 표준화와 시계열', href: '/docs/api/timeseries' },
+			{ title: '섹터 분류', href: '/docs/api/sector' },
+			{ title: '인사이트 등급', href: '/docs/api/insight' },
+			{ title: '시장 순위', href: '/docs/api/rank' }
 		]
 	},
 	{
@@ -30,14 +34,8 @@ export const navigation: NavItem[] = [
 			{ title: '1. Quickstart', href: '/docs/tutorials/quickstart' },
 			{ title: '2. Financial Deep Dive', href: '/docs/tutorials/financial' },
 			{ title: '3. Disclosure Text', href: '/docs/tutorials/disclosure' },
-			{ title: '4. Advanced Analysis', href: '/docs/tutorials/advanced' }
-		]
-	},
-	{
-		title: 'User Guide',
-		href: '/docs/user-guide',
-		items: [
-			{ title: 'Bridge Matching', href: '/docs/user-guide/bridge-matching' }
+			{ title: '4. Advanced Analysis', href: '/docs/tutorials/advanced' },
+			{ title: '5. 기업 간 비교', href: '/docs/tutorials/cross-company' }
 		]
 	},
 	{

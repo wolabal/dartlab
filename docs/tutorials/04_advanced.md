@@ -314,5 +314,6 @@ d["notes"]["inventory"], d["notes"]["borrowings"]
 
 ## 다음 단계
 
+- [5. 기업 간 비교](./cross-company) — 계정 표준화, 시계열 비교, 섹터·인사이트·순위
 - [API Overview](../api/overview) — property 전체 목록과 파라미터 상세
-- [Bridge Matching](../user-guide/bridge-matching) — 매칭 알고리즘 상세
+- [계정 표준화와 시계열](../api/timeseries) — 7단계 매핑, snakeId, 정규화 방식

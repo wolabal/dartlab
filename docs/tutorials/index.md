@@ -14,6 +14,7 @@ DartLab의 핵심 기능을 단계별로 익힌다. 각 튜토리얼은 Google C
 | 02 Financial Deep Dive | 배당, 직원, 최대주주, 부문별 매출, 비용 분류 | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/eddmpython/dartlab/blob/master/notebooks/tutorials/02_financial.ipynb) |
 | 03 Disclosure Text | 사업의 내용, MD&A, 회사의 개요, 원재료 | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/eddmpython/dartlab/blob/master/notebooks/tutorials/03_disclosure.ipynb) |
 | 04 Advanced Analysis | K-IFRS 주석(Notes), 유형자산, 관계기업, 교차 분석 | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/eddmpython/dartlab/blob/master/notebooks/tutorials/04_advanced.ipynb) |
+| 05 Cross-Company | 계정 표준화, 시계열 비교, 섹터·인사이트·순위 | |
 
 ## 시작하기 전에
 

@@ -3,7 +3,6 @@ import type { EntryGenerator } from './$types';
 const modules = import.meta.glob(
 	[
 		'@docs/getting-started/*.md',
-		'@docs/user-guide/*.md',
 		'@docs/api/*.md',
 		'@docs/tutorials/*.md',
 		'@docs/changelog.md',
