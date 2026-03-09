@@ -5,6 +5,10 @@ K-IFRS 전문 재무분석 프롬프트를 제공한다.
 업종별 벤치마크, 교차검증 규칙, Few-shot 예시를 지원한다.
 """
 
+from __future__ import annotations
+
+from typing import Any
+
 SYSTEM_PROMPT_KR = """당신은 한국 상장기업 재무분석 전문 애널리스트입니다.
 DART(전자공시시스템)의 정기보고서·주석·공시 데이터를 기반으로 분석합니다.
 
@@ -605,6 +609,25 @@ def _classify_question(question: str) -> str | None:
 	return max(scores, key=scores.get)
 
 
+def _classify_question_multi(question: str, max_types: int = 3) -> list[str]:
+	"""복합 질문에서 여러 분석 유형을 감지.
+
+	Returns:
+		매칭된 유형 리스트 (점수 높은 순, 최대 max_types개)
+	"""
+	scores: dict[str, int] = {}
+	for q_type, keywords in _QUESTION_TYPE_MAP.items():
+		score = sum(1 for kw in keywords if kw in question)
+		if score > 0:
+			scores[q_type] = score
+
+	if not scores:
+		return []
+
+	sorted_types = sorted(scores, key=scores.get, reverse=True)
+	return sorted_types[:max_types]
+
+
 def _match_sector(sector_name: str) -> str | None:
 	"""KRX 업종명에서 벤치마크 키 매칭."""
 	if not sector_name:
@@ -653,6 +676,88 @@ DART 전자공시 데이터를 기반으로 분석합니다.
 - "-"은 데이터 없음
 """
 
+_CROSS_VALIDATION_COMPACT = (
+	"\n## 교차검증\n"
+	"- 영업이익 흑자 + 영업CF 적자 → 이익의 질 의심\n"
+	"- 매출채권 증가율 > 매출 증가율 → 대손 리스크\n"
+	"- 부채비율 YoY 30%p↑ → BS/CF 교차 확인\n"
+	"- 이자보상배율 < 1 → 재무 위기\n"
+	"- FCF 3년 연속 음수 → 외부 자금 의존\n"
+)
+
+_TOPIC_COMPACT: dict[str, tuple[set[str], str]] = {
+	"governance": (
+		{"majorHolder", "executive", "boardOfDirectors", "holderOverview", "auditSystem"},
+		"\n## 지배구조 참고\n"
+		"- 사외이사 1/3↑ 상법 요건, 최대주주 30%↑ 경영권 안정\n"
+		"- 감사위원회 사외이사 전원 여부, 이사회 출석률 80%↓ 주의\n",
+	),
+	"risk": (
+		{"contingentLiability", "sanction", "riskDerivative", "internalControl"},
+		"\n## 리스크 참고\n"
+		"- 우발부채 = 잠재 부채, 채무보증/자본 비율 확인\n"
+		"- 내부통제 취약 → 재무제표 신뢰성↓, 반복 제재 → 구조적 문제\n",
+	),
+	"dividend": (
+		{"dividend", "shareCapital"},
+		"\n## 배당 참고\n"
+		"- 배당성향 100%↑ 지속 불가, DPS 연속증가 = 주주환원 의지\n",
+	),
+	"investment": (
+		{"rnd", "tangibleAsset", "subsidiary", "investmentInOther"},
+		"\n## 투자 참고\n"
+		"- CAPEX > 감가상각 = 성장 투자, R&D/매출↑ = 기술 집약\n",
+	),
+}
+
+_FEW_SHOT_COMPACT: dict[str, str] = {
+	"건전성": (
+		"\n## 예시 (건전성)\n"
+		"Q: 재무 건전성은?\n"
+		"A: **부채비율 45.2%(양호)**, 유동비율 185.3%. "
+		"영업CF 3,200 > 순이익 2,100 → 이익의 질 양호. "
+		"FCF +1,200으로 자체 자금 조달 가능. 감사의견 적정 연속. "
+		"**종합: 건전성 양호.**\n"
+	),
+	"수익성": (
+		"\n## 예시 (수익성)\n"
+		"Q: 수익성 분석해줘\n"
+		"A: | 연도 | 매출 | 영업이익률 | ROE |\n"
+		"|------|------|-----------|-----|\n"
+		"| 2023 | 2.0조 | **15.0%** | 21.0% |\n"
+		"| 2022 | 1.8조 | 13.9% | 18.0% |\n\n"
+		"매출 CAGR 11.8%, 이익 CAGR 16.8% → 영업레버리지 효과. "
+		"**수익성 우수.** 원가율 변동 모니터링 필요.\n"
+	),
+	"종합": (
+		"\n## 예시 (종합)\n"
+		"Q: 종합 분석해줘\n"
+		"A: **수익성**: 영업이익률 15%, ROE 21% → 양호\n"
+		"**건전성**: 부채비율 45%, 유동비율 185% → 양호\n"
+		"**현금흐름**: 영업CF > 순이익, FCF 양수 → 양호\n"
+		"**배당**: DPS 3년 연속↑, 성향 35.7% → 양호\n"
+		"**리스크**: 특이사항 없음\n"
+		"**종합: 수익성·건전성·현금흐름 모두 양호한 우량 기업.**\n"
+	),
+	"배당": (
+		"\n## 예시 (배당)\n"
+		"Q: 배당 분석해줘\n"
+		"A: | 연도 | DPS | 수익률 | 성향 |\n"
+		"|------|-----|--------|------|\n"
+		"| 2023 | 1,500원 | 2.8% | 35.7% |\n"
+		"| 2022 | 1,200원 | 2.5% | 33.3% |\n\n"
+		"DPS 3년 연속↑, 성향 30~36% 안정 범위. FCF 충분. "
+		"**주주환원 양호.**\n"
+	),
+	"지배구조": (
+		"\n## 예시 (지배구조)\n"
+		"Q: 지배구조 분석해줘\n"
+		"A: 최대주주 지분 35.2% → 경영권 안정. "
+		"사외이사 3/8(37.5%) → 1/3 요건 충족. "
+		"감사의견 적정 5년 연속. **지배구조 양호.**\n"
+	),
+}
+
 
 def build_system_prompt(
 	custom: str | None = None,
@@ -660,6 +765,7 @@ def build_system_prompt(
 	included_modules: list[str] | None = None,
 	sector: str | None = None,
 	question_type: str | None = None,
+	question_types: list[str] | None = None,
 	compact: bool = False,
 ) -> str:
 	"""시스템 프롬프트 조립.
@@ -669,11 +775,14 @@ def build_system_prompt(
 		lang: "ko" 또는 "en"
 		included_modules: 컨텍스트에 포함된 모듈 목록 → 토픽 프롬프트 동적 추가
 		sector: KRX 업종명 → 업종별 벤치마크 추가
-		question_type: 질문 유형 → Few-shot 예시 추가
+		question_type: 단일 질문 유형 → Few-shot 예시 추가 (하위호환)
+		question_types: 복수 질문 유형 → question_type보다 우선
 		compact: True면 소형 모델용 간결 프롬프트 (Ollama)
 	"""
 	if custom:
 		return custom
+
+	q_types = question_types or ([question_type] if question_type else [])
 
 	if compact:
 		base = SYSTEM_PROMPT_COMPACT
@@ -683,6 +792,21 @@ def build_system_prompt(
 			benchmark_key = _match_sector(sector)
 			if benchmark_key and benchmark_key in _INDUSTRY_BENCHMARKS:
 				appended.append(_INDUSTRY_BENCHMARKS[benchmark_key])
+
+		if included_modules:
+			module_set = set(included_modules)
+			for _tname, (trigger_modules, prompt_text) in _TOPIC_COMPACT.items():
+				if module_set & trigger_modules:
+					appended.append(prompt_text)
+
+		if included_modules:
+			fs_modules = {"BS", "IS", "CF"}
+			if fs_modules & set(included_modules):
+				appended.append(_CROSS_VALIDATION_COMPACT)
+
+		for qt in q_types[:1]:
+			if qt in _FEW_SHOT_COMPACT:
+				appended.append(_FEW_SHOT_COMPACT[qt])
 
 		if appended:
 			return base + "\n".join(appended)
@@ -707,10 +831,130 @@ def build_system_prompt(
 		if fs_modules & set(included_modules):
 			appended.append(_CROSS_VALIDATION_RULES)
 
-	if question_type and question_type in _FEW_SHOT_EXAMPLES:
-		appended.append(_FEW_SHOT_EXAMPLES[question_type])
+	for qt in q_types[:2]:
+		if qt in _FEW_SHOT_EXAMPLES:
+			appended.append(_FEW_SHOT_EXAMPLES[qt])
 
 	if appended:
 		return base + "\n".join(appended)
 
 	return base
+
+
+# ══════════════════════════════════════
+# Self-Critique (2-pass 응답 검토)
+# ══════════════════════════════════════
+
+SELF_CRITIQUE_PROMPT = """당신은 재무분석 응답의 품질 검토자입니다.
+아래 응답을 다음 기준으로 검토하세요.
+
+## 검토 기준
+1. **데이터 정합성**: 인용된 수치가 제공된 데이터와 일치하는가?
+2. **테이블 사용**: 수치 2개 이상이면 마크다운 테이블을 사용했는가?
+3. **해석 제공**: 숫자만 나열하지 않고 "왜?"와 "그래서?"를 설명했는가?
+4. **출처 명시**: 수치 인용 시 테이블명과 연도를 표기했는가?
+5. **결론 존재**: 명확한 판단과 근거 요약이 있는가?
+
+## 응답 형식
+문제가 없으면 "PASS"만 출력하세요.
+문제가 있으면 아래 형식으로 수정 제안을 출력하세요:
+
+ISSUES:
+- [기준번호] 구체적 문제 설명
+
+REVISED:
+(수정된 전체 응답)
+"""
+
+
+def build_critique_messages(
+	original_response: str,
+	context_text: str,
+	question: str,
+) -> list[dict[str, str]]:
+	"""Self-Critique용 메시지 리스트 생성.
+
+	Returns:
+		LLM에 전달할 messages 리스트
+	"""
+	return [
+		{"role": "system", "content": SELF_CRITIQUE_PROMPT},
+		{"role": "user", "content": (
+			f"## 원본 질문\n{question}\n\n"
+			f"## 제공된 데이터\n{context_text[:3000]}\n\n"
+			f"## 검토 대상 응답\n{original_response}"
+		)},
+	]
+
+
+def parse_critique_result(critique_text: str) -> tuple[bool, str]:
+	"""Self-Critique 결과 파싱.
+
+	Returns:
+		(passed, revised_or_original)
+		- passed=True이면 원본 그대로 사용
+		- passed=False이면 수정된 응답 반환
+	"""
+	stripped = critique_text.strip()
+	if stripped.upper().startswith("PASS"):
+		return True, ""
+
+	if "REVISED:" in stripped:
+		idx = stripped.index("REVISED:")
+		revised = stripped[idx + len("REVISED:"):].strip()
+		if revised:
+			return False, revised
+
+	return True, ""
+
+
+# ══════════════════════════════════════
+# Structured Output — 응답 메타데이터 추출
+# ══════════════════════════════════════
+
+import re as _re
+
+_GRADE_PATTERN = _re.compile(
+	r"(?:종합|결론|판단|등급|평가)[:\s]*[*]*([A-F][+-]?|양호|보통|주의|위험|우수|매우 우수|취약)[*]*",
+	_re.IGNORECASE,
+)
+
+_SIGNAL_KEYWORDS = {
+	"positive": ["양호", "우수", "안정", "개선", "성장", "흑자", "증가"],
+	"negative": ["위험", "주의", "악화", "하락", "적자", "감소", "취약"],
+}
+
+
+def extract_response_meta(response_text: str) -> dict[str, Any]:
+	"""LLM 응답에서 구조화된 메타데이터 추출.
+
+	Returns:
+		{
+			"grade": "양호" | "주의" | "위험" | "A" | None,
+			"signals": {"positive": [...], "negative": [...]},
+			"tables_count": int,
+			"has_conclusion": bool,
+		}
+	"""
+	meta: dict[str, Any] = {
+		"grade": None,
+		"signals": {"positive": [], "negative": []},
+		"tables_count": 0,
+		"has_conclusion": False,
+	}
+
+	grade_match = _GRADE_PATTERN.search(response_text)
+	if grade_match:
+		meta["grade"] = grade_match.group(1).strip("*")
+
+	for direction, keywords in _SIGNAL_KEYWORDS.items():
+		for kw in keywords:
+			if kw in response_text:
+				meta["signals"][direction].append(kw)
+
+	meta["tables_count"] = len(_re.findall(r"\|-{2,}", response_text)) // 2
+
+	conclusion_keywords = ["결론", "종합 평가", "종합 판단", "종합:", "Conclusion"]
+	meta["has_conclusion"] = any(kw in response_text for kw in conclusion_keywords)
+
+	return meta

@@ -766,7 +766,7 @@ async def _stream_ask(c: Company | None, req: AskRequest, *, not_found_msg: str 
 				build_context_by_module,
 				detect_year_range, _get_sector,
 			)
-			from dartlab.engines.llmAnalyzer.prompts import build_system_prompt, _classify_question
+			from dartlab.engines.llmAnalyzer.prompts import build_system_prompt, _classify_question_multi
 			from dartlab.engines.llmAnalyzer.metadata import MODULE_META
 
 			snapshot = await asyncio.to_thread(_build_snapshot, c)
@@ -778,7 +778,7 @@ async def _stream_ask(c: Company | None, req: AskRequest, *, not_found_msg: str 
 
 			modules_dict, included_tables, header_text = await asyncio.to_thread(
 				build_context_by_module, c, req.question,
-				req.include, req.exclude,
+				req.include, req.exclude, use_compact,
 			)
 
 			if "_full" in modules_dict:
@@ -831,12 +831,12 @@ async def _stream_ask(c: Company | None, req: AskRequest, *, not_found_msg: str 
 			}
 
 			sector = _get_sector(c)
-			question_type = _classify_question(req.question)
+			question_types = _classify_question_multi(req.question)
 			system = build_system_prompt(
 				config_.system_prompt,
 				included_modules=included_tables,
 				sector=sector,
-				question_type=question_type,
+				question_types=question_types,
 				compact=use_compact,
 			)
 			messages = [{"role": "system", "content": system}]
@@ -851,6 +851,8 @@ async def _stream_ask(c: Company | None, req: AskRequest, *, not_found_msg: str 
 
 		# tool calling 지원 여부 확인
 		use_tools = c is not None and hasattr(llm, "complete_with_tools")
+
+		full_response_parts: list[str] = []
 
 		if use_tools:
 			from dartlab.engines.llmAnalyzer.agent import agent_loop, AGENT_SYSTEM_ADDITION
@@ -888,6 +890,7 @@ async def _stream_ask(c: Company | None, req: AskRequest, *, not_found_msg: str 
 				ev = await queue.get()
 				if ev["event"] == "_done":
 					if ev.get("answer"):
+						full_response_parts.append(ev["answer"])
 						yield {
 							"event": "chunk",
 							"data": json.dumps({"text": ev["answer"]}, ensure_ascii=False),
@@ -908,10 +911,19 @@ async def _stream_ask(c: Company | None, req: AskRequest, *, not_found_msg: str 
 				chunk = await asyncio.to_thread(next, gen, None)
 				if chunk is None:
 					break
+				full_response_parts.append(chunk)
 				yield {
 					"event": "chunk",
 					"data": json.dumps({"text": chunk}, ensure_ascii=False),
 				}
+
+		done_payload: dict[str, Any] = {}
+		if c and full_response_parts:
+			from dartlab.engines.llmAnalyzer.prompts import extract_response_meta
+			full_text = "".join(full_response_parts)
+			response_meta = extract_response_meta(full_text)
+			if response_meta.get("grade") or response_meta.get("has_conclusion"):
+				done_payload["responseMeta"] = response_meta
 
 	except Exception as e:
 		yield {
@@ -919,7 +931,7 @@ async def _stream_ask(c: Company | None, req: AskRequest, *, not_found_msg: str 
 			"data": json.dumps({"error": str(e)}, ensure_ascii=False),
 		}
 
-	yield {"event": "done", "data": "{}"}
+	yield {"event": "done", "data": json.dumps(done_payload, ensure_ascii=False)}
 
 
 # ── Static Files (Svelte build) ──

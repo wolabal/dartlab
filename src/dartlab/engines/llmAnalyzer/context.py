@@ -15,6 +15,110 @@ from dartlab.engines.llmAnalyzer.metadata import MODULE_META, ModuleMeta
 
 
 # ══════════════════════════════════════
+# reportEngine 기반 컨텍스트 (2차 데이터 소스)
+# ══════════════════════════════════════
+
+def _build_report_sections(company: Any, compact: bool = False) -> dict[str, str]:
+	"""reportEngine pivot 결과 → LLM context 섹션 dict."""
+	report = getattr(company, "report", None)
+	if report is None:
+		return {}
+
+	sections: dict[str, str] = {}
+	max_years = 3 if compact else 99
+
+	div = getattr(report, "dividend", None)
+	if div is not None and div.years:
+		display_years = div.years[-max_years:]
+		offset = len(div.years) - len(display_years)
+		lines = ["## 배당 시계열 (정기보고서)"]
+		header = "| 연도 | " + " | ".join(str(y) for y in display_years) + " |"
+		sep = "| --- | " + " | ".join(["---"] * len(display_years)) + " |"
+		lines.append(header)
+		lines.append(sep)
+
+		def _fmtList(vals):
+			return [str(round(v)) if v is not None else "-" for v in vals]
+
+		lines.append("| DPS(원) | " + " | ".join(_fmtList(div.dps[offset:])) + " |")
+		lines.append("| 배당수익률(%) | " + " | ".join(
+			[f"{v:.2f}" if v is not None else "-" for v in div.dividendYield[offset:]]
+		) + " |")
+		sections["report_dividend"] = "\n".join(lines)
+
+	emp = getattr(report, "employee", None)
+	if emp is not None and emp.years:
+		display_years = emp.years[-max_years:]
+		offset = len(emp.years) - len(display_years)
+		lines = ["## 직원현황 (정기보고서)"]
+		header = "| 연도 | " + " | ".join(str(y) for y in display_years) + " |"
+		sep = "| --- | " + " | ".join(["---"] * len(display_years)) + " |"
+		lines.append(header)
+		lines.append(sep)
+
+		def _fmtEmp(vals):
+			return [f"{int(v):,}" if v is not None else "-" for v in vals]
+
+		def _fmtSalary(vals):
+			return [f"{int(v):,}" if v is not None else "-" for v in vals]
+
+		lines.append("| 총 직원수(명) | " + " | ".join(_fmtEmp(emp.totalEmployee[offset:])) + " |")
+		lines.append("| 평균월급(천원) | " + " | ".join(_fmtSalary(emp.avgMonthlySalary[offset:])) + " |")
+		sections["report_employee"] = "\n".join(lines)
+
+	mh = getattr(report, "majorHolder", None)
+	if mh is not None and mh.years:
+		lines = ["## 최대주주 (정기보고서)"]
+		if compact:
+			latest_ratio = mh.totalShareRatio[-1] if mh.totalShareRatio else None
+			ratio_str = f"{latest_ratio:.2f}%" if latest_ratio is not None else "-"
+			lines.append(f"- {mh.years[-1]}년 합산 지분율: {ratio_str}")
+		else:
+			header = "| 연도 | " + " | ".join(str(y) for y in mh.years) + " |"
+			sep = "| --- | " + " | ".join(["---"] * len(mh.years)) + " |"
+			lines.append(header)
+			lines.append(sep)
+			lines.append("| 합산 지분율(%) | " + " | ".join(
+				[f"{v:.2f}" if v is not None else "-" for v in mh.totalShareRatio]
+			) + " |")
+
+		if mh.latestHolders:
+			holder_limit = 3 if compact else 5
+			if not compact:
+				lines.append("")
+				lines.append(f"### 최근 주요주주 ({mh.years[-1]}년)")
+			for h in mh.latestHolders[:holder_limit]:
+				ratio = f"{h['ratio']:.2f}%" if h.get("ratio") is not None else "-"
+				relate = f" ({h['relate']})" if h.get("relate") else ""
+				lines.append(f"- {h['name']}{relate}: {ratio}")
+		sections["report_majorHolder"] = "\n".join(lines)
+
+	exe = getattr(report, "executive", None)
+	if exe is not None and exe.totalCount > 0:
+		lines = [
+			"## 임원현황 (정기보고서)",
+			f"- 총 임원수: {exe.totalCount}명",
+			f"- 사내이사: {exe.registeredCount}명",
+			f"- 사외이사: {exe.outsideCount}명",
+		]
+		sections["report_executive"] = "\n".join(lines)
+
+	aud = getattr(report, "audit", None)
+	if aud is not None and aud.years:
+		lines = ["## 감사의견 (정기보고서)"]
+		display_aud = list(zip(aud.years, aud.opinions, aud.auditors))
+		if compact:
+			display_aud = display_aud[-2:]
+		for y, opinion, auditor in display_aud:
+			opinion = opinion or "-"
+			auditor = auditor or "-"
+			lines.append(f"- {y}년: {opinion} ({auditor})")
+		sections["report_audit"] = "\n".join(lines)
+
+	return sections
+
+
+# ══════════════════════════════════════
 # financeEngine 기반 컨텍스트 (1차 데이터 소스)
 # ══════════════════════════════════════
 
@@ -138,7 +242,7 @@ def _build_finance_engine_section(
 	return "\n".join(lines)
 
 
-def _build_ratios_section(company: Any) -> str | None:
+def _build_ratios_section(company: Any, compact: bool = False) -> str | None:
 	"""financeEngine RatioResult → 마크다운."""
 	ratios = getattr(company, "ratios", None)
 	if ratios is None:
@@ -172,17 +276,17 @@ def _build_ratios_section(company: Any) -> str | None:
 		lines.append(f"| ROA | {ratios.roa:.1f}% | {_judge(ratios.roa, 5, 2)} |")
 	if ratios.operatingMargin is not None:
 		lines.append(f"| 영업이익률 | {ratios.operatingMargin:.1f}% | - |")
-	if ratios.netMargin is not None:
+	if not compact and ratios.netMargin is not None:
 		lines.append(f"| 순이익률 | {ratios.netMargin:.1f}% | - |")
 	if ratios.debtRatio is not None:
 		lines.append(f"| 부채비율 | {ratios.debtRatio:.1f}% | {_judge_inv(ratios.debtRatio, 100, 200)} |")
 	if ratios.currentRatio is not None:
 		lines.append(f"| 유동비율 | {ratios.currentRatio:.1f}% | {_judge(ratios.currentRatio, 150, 100)} |")
-	if ratios.equityRatio is not None:
+	if not compact and ratios.equityRatio is not None:
 		lines.append(f"| 자기자본비율 | {ratios.equityRatio:.1f}% | {_judge(ratios.equityRatio, 50, 30)} |")
-	if ratios.netDebt is not None:
+	if not compact and ratios.netDebt is not None:
 		lines.append(f"| 순차입금 | {_format_won(ratios.netDebt)} | {'양호' if ratios.netDebt <= 0 else '주의'} |")
-	if ratios.netDebtRatio is not None:
+	if not compact and ratios.netDebtRatio is not None:
 		lines.append(f"| 순차입금비율 | {ratios.netDebtRatio:.1f}% | {_judge_inv(ratios.netDebtRatio, 30, 80)} |")
 	if ratios.fcf is not None:
 		lines.append(f"| FCF | {_format_won(ratios.fcf)} | {'양호' if ratios.fcf > 0 else '주의'} |")
@@ -204,7 +308,8 @@ def _build_ratios_section(company: Any) -> str | None:
 	if ratios.warnings:
 		lines.append("")
 		lines.append("### 경고")
-		for w in ratios.warnings:
+		max_warnings = 2 if compact else len(ratios.warnings)
+		for w in ratios.warnings[:max_warnings]:
 			lines.append(f"- ⚠️ {w}")
 
 	return "\n".join(lines)
@@ -215,11 +320,15 @@ def build_context_by_module(
 	question: str,
 	include: list[str] | None = None,
 	exclude: list[str] | None = None,
+	compact: bool = False,
 ) -> tuple[dict[str, str], list[str], str]:
 	"""financeEngine 우선 compact 컨텍스트 빌더 (모듈별 분리).
 
 	1차: financeEngine annual + ratios (빠르고 정규화된 수치)
 	2차: docsParser 정성 데이터 (배당, 감사, 임원 등 — 질문에 맞는 것만)
+
+	Args:
+		compact: True면 소형 모델용으로 연도/행수 제한 (Ollama).
 
 	Returns:
 		(modules_dict, included_list, header_text)
@@ -233,6 +342,8 @@ def build_context_by_module(
 	config.verbose = False
 
 	n_years = _detect_year_hint(question)
+	if compact:
+		n_years = min(n_years, 4)
 	modules_dict: dict[str, str] = {}
 	included: list[str] = []
 
@@ -267,11 +378,16 @@ def build_context_by_module(
 					included.append(sj)
 					fe_loaded = True
 
-	ratios_section = _build_ratios_section(company)
+	ratios_section = _build_ratios_section(company, compact=compact)
 	if ratios_section:
 		modules_dict["ratios"] = ratios_section
 		if "ratios" not in included:
 			included.append("ratios")
+
+	report_sections = _build_report_sections(company, compact=compact)
+	for key, section in report_sections.items():
+		modules_dict[key] = section
+		included.append(key)
 
 	has_docs = getattr(company, "_hasDocs", False)
 
@@ -311,14 +427,18 @@ def build_context_by_module(
 
 				section_parts = [f"\n## {label}"]
 
+				max_rows_qual = 8 if compact else 15
 				if isinstance(data, pl.DataFrame):
-					md = df_to_markdown(data, max_rows=15, meta=meta, compact=True)
+					md = df_to_markdown(data, max_rows=max_rows_qual, meta=meta, compact=True)
 					section_parts.append(md)
 				elif isinstance(data, dict):
-					dict_lines = [f"- {k}: {v}" for k, v in data.items()]
+					items = list(data.items())
+					if compact:
+						items = items[:8]
+					dict_lines = [f"- {k}: {v}" for k, v in items]
 					section_parts.append("\n".join(dict_lines))
 				elif isinstance(data, list):
-					max_items = min(meta.maxRows if meta else 10, 10)
+					max_items = min(meta.maxRows if meta else 10, 5 if compact else 10)
 					list_lines = []
 					for item in data[:max_items]:
 						if hasattr(item, "title") and hasattr(item, "chars"):
@@ -329,7 +449,8 @@ def build_context_by_module(
 						list_lines.append(f"(... 상위 {max_items}건, 전체 {len(data)}건)")
 					section_parts.append("\n".join(list_lines))
 				else:
-					section_parts.append(str(data)[:1000])
+					max_text = 500 if compact else 1000
+					section_parts.append(str(data)[:max_text])
 
 				modules_dict[name] = "\n".join(section_parts)
 				included.append(name)
@@ -357,7 +478,7 @@ def build_compact_context(
 	build_context_by_module 결과를 단일 문자열로 합쳐 반환한다.
 	"""
 	modules_dict, included, header = build_context_by_module(
-		company, question, include, exclude,
+		company, question, include, exclude, compact=True,
 	)
 	if "_full" in modules_dict:
 		return modules_dict["_full"], included
@@ -1071,6 +1192,11 @@ def build_context(
 
 		except Exception:
 			continue
+
+	report_sections = _build_report_sections(company)
+	for key, section in report_sections.items():
+		sections.append(section)
+		included.append(key)
 
 	if not compact:
 		available_modules = scan_available_modules(company)
