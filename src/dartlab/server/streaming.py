@@ -76,6 +76,11 @@ async def stream_ask(c: Company | None, req: AskRequest, *, not_found_msg: str |
 			messages.extend(history_msgs)
 			messages.append({"role": "user", "content": req.question})
 
+			yield {
+				"event": "system_prompt",
+				"data": json.dumps({"text": light_prompt}, ensure_ascii=False),
+			}
+
 			llm = create_provider(config_)
 			def _gen_light():
 				yield from llm.stream(messages)
@@ -171,11 +176,23 @@ async def stream_ask(c: Company | None, req: AskRequest, *, not_found_msg: str |
 			)
 			messages = [{"role": "system", "content": system}]
 			messages.extend(history_msgs)
-			messages.append({"role": "user", "content": f"{context_text}\n\n---\n\n질문: {req.question}"})
+			user_content = f"{context_text}\n\n---\n\n질문: {req.question}"
+			messages.append({"role": "user", "content": user_content})
+
+			yield {
+				"event": "system_prompt",
+				"data": json.dumps({"text": system, "userContent": user_content}, ensure_ascii=False),
+			}
 		else:
-			messages = [{"role": "system", "content": build_dynamic_chat_prompt()}]
+			chat_prompt = build_dynamic_chat_prompt()
+			messages = [{"role": "system", "content": chat_prompt}]
 			messages.extend(history_msgs)
 			messages.append({"role": "user", "content": req.question})
+
+			yield {
+				"event": "system_prompt",
+				"data": json.dumps({"text": chat_prompt}, ensure_ascii=False),
+			}
 
 		llm = create_provider(config_)
 

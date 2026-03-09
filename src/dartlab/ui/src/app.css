@@ -106,33 +106,58 @@ html, body, #app {
 	animation: fadeIn 0.3s ease-out;
 }
 
-/* ── Markdown prose ── */
-.prose-dartlab h1, .prose-dartlab h2, .prose-dartlab h3 {
-	margin-top: 1.2em; margin-bottom: 0.4em; font-weight: 600; color: var(--color-dl-text);
+/* ── Markdown prose (landing docs 스타일 통일) ── */
+.prose-dartlab h1 {
+	font-size: 1.35em; font-weight: 700; color: var(--color-dl-text);
+	margin-top: 1.5em; margin-bottom: 0.5em;
 }
-.prose-dartlab h1 { font-size: 1.3em; }
-.prose-dartlab h2 { font-size: 1.15em; }
-.prose-dartlab h3 { font-size: 1.05em; }
-.prose-dartlab p { margin-bottom: 0.6em; }
-.prose-dartlab ul, .prose-dartlab ol { padding-left: 1.5em; margin-bottom: 0.6em; }
-.prose-dartlab li { margin-bottom: 0.2em; }
+.prose-dartlab h2 {
+	font-size: 1.15em; font-weight: 600; color: var(--color-dl-text);
+	margin-top: 1.8em; margin-bottom: 0.5em;
+	padding-bottom: 0.4em; border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+}
+.prose-dartlab h3 {
+	font-size: 1.05em; font-weight: 600; color: #e2e8f0;
+	margin-top: 1.4em; margin-bottom: 0.4em;
+}
+.prose-dartlab p { line-height: 1.75; color: var(--color-dl-text-muted); margin-bottom: 0.8em; }
+.prose-dartlab ul, .prose-dartlab ol { padding-left: 1.5em; margin-bottom: 0.8em; }
+.prose-dartlab li { margin-bottom: 0.3em; color: var(--color-dl-text-muted); line-height: 1.7; }
 .prose-dartlab code {
-	background: var(--color-dl-bg-card-hover); padding: 2px 6px; border-radius: 5px;
-	font-size: 0.88em; font-family: var(--font-mono);
+	background: rgba(148, 163, 184, 0.1); padding: 2px 6px; border-radius: 4px;
+	font-size: 0.875em; font-family: var(--font-mono); color: #e2e8f0;
 }
 .prose-dartlab pre {
-	background: var(--color-dl-bg-darker, #030509); padding: 16px; border-radius: 12px;
-	overflow-x: auto; margin-bottom: 0.8em; border: 1px solid var(--color-dl-border);
+	background: #0d1117; padding: 1rem; border-radius: 8px;
+	overflow-x: auto; margin: 0.8em 0; border: 1px solid rgba(148, 163, 184, 0.1);
+	font-size: 0.85em;
 }
-.prose-dartlab pre code { background: none; padding: 0; }
-.prose-dartlab table { border-collapse: collapse; width: 100%; margin-bottom: 0.8em; font-size: 0.9em; }
-.prose-dartlab th, .prose-dartlab td { border: 1px solid var(--color-dl-border); padding: 8px 12px; text-align: left; }
-.prose-dartlab th { background: var(--color-dl-bg-card-hover); font-weight: 600; white-space: nowrap; }
-.prose-dartlab td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.prose-dartlab pre code { background: none; padding: 0; color: var(--color-dl-text-muted); }
+.prose-dartlab table {
+	border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.875em;
+}
+.prose-dartlab th {
+	text-align: left; padding: 0.6rem 0.8rem;
+	border-bottom: 2px solid rgba(148, 163, 184, 0.15);
+	color: var(--color-dl-text); font-weight: 600; font-size: 0.8rem;
+	white-space: nowrap; letter-spacing: 0.02em;
+}
+.prose-dartlab td {
+	padding: 0.5rem 0.8rem;
+	border-bottom: 1px solid rgba(148, 163, 184, 0.06);
+	color: var(--color-dl-text-muted);
+}
+.prose-dartlab td.num {
+	text-align: right; font-variant-numeric: tabular-nums;
+	font-family: var(--font-mono); font-size: 0.85em;
+}
 .prose-dartlab thead { position: sticky; top: 0; }
-.prose-dartlab tbody tr:hover { background: var(--color-dl-bg-card-hover); }
+.prose-dartlab tbody tr:hover td { background: rgba(148, 163, 184, 0.03); }
 .prose-dartlab strong { font-weight: 600; color: var(--color-dl-text); }
 .prose-dartlab blockquote {
-	border-left: 3px solid var(--color-dl-border); padding-left: 14px;
-	color: var(--color-dl-text-muted); margin-bottom: 0.8em;
+	border-left: 3px solid var(--color-dl-primary); padding: 0.4em 1em;
+	margin: 0.8em 0; background: rgba(234, 70, 71, 0.04); border-radius: 0 6px 6px 0;
+	color: var(--color-dl-text-muted);
 }
+.prose-dartlab a { color: var(--color-dl-primary); text-decoration: none; }
+.prose-dartlab a:hover { text-decoration: underline; }

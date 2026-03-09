@@ -137,7 +137,7 @@ export async function ask(company, question, options = {}) {
  * @param {function} onDone - done 이벤트 콜백
  * @param {function} onError - error 이벤트 콜백
  */
-export function askStream(company, question, options = {}, { onMeta, onSnapshot, onContext, onToolCall, onToolResult, onChunk, onDone, onError }, history = null) {
+export function askStream(company, question, options = {}, { onMeta, onSnapshot, onContext, onSystemPrompt, onToolCall, onToolResult, onChunk, onDone, onError }, history = null) {
 	const body = { question, stream: true, ...options };
 	if (company) body.company = company;
 	if (history && history.length > 0) body.history = history;
@@ -181,6 +181,7 @@ export function askStream(company, question, options = {}, { onMeta, onSnapshot,
 							if (currentEvent === "meta") onMeta?.(parsed);
 							else if (currentEvent === "snapshot") onSnapshot?.(parsed);
 							else if (currentEvent === "context") onContext?.(parsed);
+							else if (currentEvent === "system_prompt") onSystemPrompt?.(parsed);
 							else if (currentEvent === "tool_call") onToolCall?.(parsed);
 							else if (currentEvent === "tool_result") onToolResult?.(parsed);
 							else if (currentEvent === "chunk") onChunk?.(parsed.text);

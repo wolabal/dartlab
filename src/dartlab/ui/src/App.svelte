@@ -414,6 +414,12 @@
 						contexts: [...prev, { module: ctx.module, label: ctx.label, text: ctx.text }],
 					});
 				},
+				onSystemPrompt(data) {
+					store.updateLastMessage({
+						systemPrompt: data.text,
+						userContent: data.userContent || null,
+					});
+				},
 				onToolCall(ev) {
 					const conv = store.active;
 					if (!conv) return;

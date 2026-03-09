@@ -13,12 +13,22 @@
 	} = $props();
 
 	let chatContainer;
+	let userScrolledUp = false;
+	let lastScrollHeight = 0;
+
+	function onScroll() {
+		if (!chatContainer) return;
+		const { scrollTop, scrollHeight, clientHeight } = chatContainer;
+		userScrolledUp = scrollHeight - scrollTop - clientHeight > 80;
+	}
 
 	$effect(() => {
 		scrollTrigger;
-		if (chatContainer) {
-			setTimeout(() => { chatContainer.scrollTop = chatContainer.scrollHeight; }, 10);
-		}
+		if (!chatContainer || userScrolledUp) return;
+		requestAnimationFrame(() => {
+			if (!chatContainer) return;
+			chatContainer.scrollTop = chatContainer.scrollHeight;
+		});
 	});
 
 	function handleKeydown(e) {
@@ -35,7 +45,7 @@
 </script>
 
 <div class="flex flex-col h-full min-h-0">
-	<div class="flex-1 overflow-y-auto min-h-0" bind:this={chatContainer}>
+	<div class="flex-1 overflow-y-auto min-h-0" bind:this={chatContainer} onscroll={onScroll}>
 		<div class="max-w-[720px] mx-auto px-5 pt-14 pb-8 space-y-8">
 			{#each messages as msg}
 				<MessageBubble message={msg} />
