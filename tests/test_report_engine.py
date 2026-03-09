@@ -8,7 +8,7 @@ from tests.conftest import SAMSUNG, requires_report
 @requires_report
 class TestExtract:
     def test_extractRaw(self):
-        from dartlab.engines.reportEngine import extractRaw
+        from dartlab.engines.dart.report import extractRaw
         df = extractRaw(SAMSUNG, "dividend")
         assert df is not None
         assert isinstance(df, pl.DataFrame)
@@ -18,36 +18,36 @@ class TestExtract:
         assert "quarterNum" in df.columns
 
     def test_extractRaw_unknown_apiType(self):
-        from dartlab.engines.reportEngine import extractRaw
+        from dartlab.engines.dart.report import extractRaw
         df = extractRaw(SAMSUNG, "nonexistent")
         assert df is None
 
     def test_extractClean_numeric(self):
-        from dartlab.engines.reportEngine import extractClean
+        from dartlab.engines.dart.report import extractClean
         df = extractClean(SAMSUNG, "employee")
         assert df is not None
         assert df["sm"].dtype == pl.Float64
 
     def test_extractClean_str_override(self):
-        from dartlab.engines.reportEngine import extractClean
+        from dartlab.engines.dart.report import extractClean
         df = extractClean(SAMSUNG, "auditOpinion")
         assert df is not None
         assert df["adtor"].dtype == pl.Utf8
 
     def test_extractAnnual(self):
-        from dartlab.engines.reportEngine import extractAnnual
+        from dartlab.engines.dart.report import extractAnnual
         df = extractAnnual(SAMSUNG, "dividend", quarterNum=4)
         assert df is not None
         assert (df["quarterNum"] == 4).all()
 
     def test_extractAnnual_default_quarter(self):
-        from dartlab.engines.reportEngine import extractAnnual
+        from dartlab.engines.dart.report import extractAnnual
         df = extractAnnual(SAMSUNG, "employee")
         assert df is not None
         assert (df["quarterNum"] == 2).all()
 
     def test_extractResult(self):
-        from dartlab.engines.reportEngine import extractResult
+        from dartlab.engines.dart.report import extractResult
         r = extractResult(SAMSUNG, "dividend")
         assert r is not None
         assert r.apiType == "dividend"
@@ -56,13 +56,13 @@ class TestExtract:
         assert isinstance(r.df, pl.DataFrame)
 
     def test_null_columns_dropped(self):
-        from dartlab.engines.reportEngine import extractRaw
+        from dartlab.engines.dart.report import extractRaw
         df = extractRaw(SAMSUNG, "dividend")
         for c in df.columns:
             assert df[c].null_count() < df.height
 
     def test_stlm_dt_null_rows_filtered(self):
-        from dartlab.engines.reportEngine import extractRaw
+        from dartlab.engines.dart.report import extractRaw
         df = extractRaw(SAMSUNG, "dividend")
         assert df["stlm_dt"].null_count() == 0
 
@@ -70,7 +70,7 @@ class TestExtract:
 @requires_report
 class TestPivotDividend:
     def test_basic(self):
-        from dartlab.engines.reportEngine import pivotDividend
+        from dartlab.engines.dart.report import pivotDividend
         r = pivotDividend(SAMSUNG)
         assert r is not None
         assert len(r.years) > 0
@@ -79,13 +79,13 @@ class TestPivotDividend:
         assert r.nYears == len(r.years)
 
     def test_has_values(self):
-        from dartlab.engines.reportEngine import pivotDividend
+        from dartlab.engines.dart.report import pivotDividend
         r = pivotDividend(SAMSUNG)
         nonNull = [v for v in r.dps if v is not None]
         assert len(nonNull) > 0
 
     def test_df_attached(self):
-        from dartlab.engines.reportEngine import pivotDividend
+        from dartlab.engines.dart.report import pivotDividend
         r = pivotDividend(SAMSUNG)
         assert isinstance(r.df, pl.DataFrame)
 
@@ -93,14 +93,14 @@ class TestPivotDividend:
 @requires_report
 class TestPivotEmployee:
     def test_basic(self):
-        from dartlab.engines.reportEngine import pivotEmployee
+        from dartlab.engines.dart.report import pivotEmployee
         r = pivotEmployee(SAMSUNG)
         assert r is not None
         assert len(r.years) > 0
         assert len(r.totalEmployee) == len(r.years)
 
     def test_employee_count(self):
-        from dartlab.engines.reportEngine import pivotEmployee
+        from dartlab.engines.dart.report import pivotEmployee
         r = pivotEmployee(SAMSUNG)
         latest = [v for v in r.totalEmployee if v is not None][-1]
         assert latest > 10000
@@ -109,14 +109,14 @@ class TestPivotEmployee:
 @requires_report
 class TestPivotMajorHolder:
     def test_basic(self):
-        from dartlab.engines.reportEngine import pivotMajorHolder
+        from dartlab.engines.dart.report import pivotMajorHolder
         r = pivotMajorHolder(SAMSUNG)
         assert r is not None
         assert len(r.years) > 0
         assert len(r.totalShareRatio) == len(r.years)
 
     def test_has_holders(self):
-        from dartlab.engines.reportEngine import pivotMajorHolder
+        from dartlab.engines.dart.report import pivotMajorHolder
         r = pivotMajorHolder(SAMSUNG)
         assert len(r.latestHolders) > 0
         assert "name" in r.latestHolders[0]
@@ -126,7 +126,7 @@ class TestPivotMajorHolder:
 @requires_report
 class TestPivotExecutive:
     def test_basic(self):
-        from dartlab.engines.reportEngine import pivotExecutive
+        from dartlab.engines.dart.report import pivotExecutive
         r = pivotExecutive(SAMSUNG)
         assert r is not None
         assert r.totalCount > 0
@@ -136,7 +136,7 @@ class TestPivotExecutive:
 @requires_report
 class TestPivotAudit:
     def test_basic(self):
-        from dartlab.engines.reportEngine import pivotAudit
+        from dartlab.engines.dart.report import pivotAudit
         r = pivotAudit(SAMSUNG)
         assert r is not None
         assert len(r.years) > 0
@@ -147,7 +147,7 @@ class TestPivotAudit:
 @requires_report
 class TestTypes:
     def test_api_types(self):
-        from dartlab.engines.reportEngine import API_TYPES, API_TYPE_LABELS
+        from dartlab.engines.dart.report import API_TYPES, API_TYPE_LABELS
         assert len(API_TYPES) == 22
         for t in API_TYPES:
             assert t in API_TYPE_LABELS

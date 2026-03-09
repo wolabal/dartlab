@@ -1,6 +1,6 @@
 """prompts 모듈 테스트."""
 
-from dartlab.engines.llmAnalyzer.prompts import (
+from dartlab.engines.ai.prompts import (
 	SYSTEM_PROMPT_EN,
 	SYSTEM_PROMPT_KR,
 	_classify_question,

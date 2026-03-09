@@ -97,7 +97,7 @@ c.IS    # Income Statement (DataFrame)
 c.CF    # Cash Flow Statement (DataFrame)
 ```
 
-### Cross-Company Comparable Time Series (financeEngine)
+### Cross-Company Comparable Time Series
 
 OpenDART financial data is mapped to standardized accounts, enabling **cross-company quarterly time series**.
 
@@ -425,7 +425,9 @@ DartLab extracts both. It aligns quarterly, semi-annual, and annual reports on a
 
 > **Current scope**
 >
-> Bridge Matching tracks account name changes **within a single company** across years. financeEngine enables **cross-company comparison** by mapping XBRL accounts to standardized snakeIds. 2,700+ listed companies are normalized to the same structure.
+> Bridge Matching tracks account name changes **within a single company** across years. The finance engine enables **cross-company comparison** by mapping XBRL accounts to standardized snakeIds. 2,700+ listed companies are normalized to the same structure.
+>
+> The insight engine grades each company across 7 areas (performance, profitability, financial health, cash flow, governance, risk), detects anomalies, and the rank engine computes market-wide size rankings.
 >
 > Text analysis capabilities are being developed in a **separate project** and will be integrated into DartLab.
 >
@@ -444,8 +446,13 @@ DartLab extracts both. It aligns quarterly, semi-annual, and annual reports on a
 - [x] MD&A, business description, company overview
 - [x] Company property API + Notes integration + all()
 - [x] Rich terminal output (avatar + usage guide)
-- [x] Account standardization engine (financeEngine) — 2,700+ companies cross-comparable
+- [x] Account standardization engine — 2,700+ companies cross-comparable
 - [x] Quarterly time series + financial ratios (c.timeseries, c.ratios)
+- [x] Periodic report data engine (dividend, employees, major holders, audit, executives)
+- [x] Sector classification (WICS 11 sectors — KSIC + keyword + override)
+- [x] Insight grading engine (7 areas: performance, profitability, health, cashflow, governance, risk + overall)
+- [x] Anomaly detection (Z-score + domain rules across 30+ financial metrics)
+- [x] Market-wide size ranking (revenue, assets, growth — total + within-sector)
 - [x] AI analysis web interface (dartlab ai) — Ollama local LLM
 - [ ] Cloud LLM providers (OpenAI, Anthropic, etc.)
 - [ ] Text analysis module integration (from separate project)

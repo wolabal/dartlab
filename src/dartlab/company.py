@@ -35,57 +35,57 @@ from dartlab.core.kindList import (
     nameToCode,
     searchName,
 )
-from dartlab.engines.docsParser.notes import Notes
+from dartlab.engines.dart.docs.notes import Notes
 
 
 # ── 모듈 레지스트리 ──
 # (모듈 import 경로, 함수명, 한글 라벨, primary DataFrame 추출)
 _MODULE_REGISTRY: list[tuple[str, str, str, Any]] = [
     # 재무제표
-    ("dartlab.engines.docsParser.finance.summary", "fsSummary", "요약재무정보", None),
-    ("dartlab.engines.docsParser.finance.statements", "statements", "재무제표", None),
-    ("dartlab.engines.docsParser.finance.segment", "segments", "부문정보", lambda r: r.revenue),
-    ("dartlab.engines.docsParser.finance.tangibleAsset", "tangibleAsset", "유형자산", lambda r: r.movementDf),
-    ("dartlab.engines.docsParser.finance.costByNature", "costByNature", "비용성격별분류", lambda r: r.timeSeries),
+    ("dartlab.engines.dart.docs.finance.summary", "fsSummary", "요약재무정보", None),
+    ("dartlab.engines.dart.docs.finance.statements", "statements", "재무제표", None),
+    ("dartlab.engines.dart.docs.finance.segment", "segments", "부문정보", lambda r: r.revenue),
+    ("dartlab.engines.dart.docs.finance.tangibleAsset", "tangibleAsset", "유형자산", lambda r: r.movementDf),
+    ("dartlab.engines.dart.docs.finance.costByNature", "costByNature", "비용성격별분류", lambda r: r.timeSeries),
     # 정기보고서
-    ("dartlab.engines.docsParser.finance.dividend", "dividend", "배당", lambda r: r.timeSeries),
-    ("dartlab.engines.docsParser.finance.majorHolder", "majorHolder", "최대주주", lambda r: r.timeSeries),
-    ("dartlab.engines.docsParser.finance.employee", "employee", "직원현황", lambda r: r.timeSeries),
-    ("dartlab.engines.docsParser.finance.subsidiary", "subsidiary", "자회사투자", lambda r: r.timeSeries),
-    ("dartlab.engines.docsParser.finance.bond", "bond", "채무증권", lambda r: r.timeSeries),
-    ("dartlab.engines.docsParser.finance.shareCapital", "shareCapital", "주식현황", lambda r: r.timeSeries),
-    ("dartlab.engines.docsParser.finance.executive", "executive", "임원현황", lambda r: r.executiveDf),
-    ("dartlab.engines.docsParser.finance.executivePay", "executivePay", "임원보수", lambda r: r.payByTypeDf),
-    ("dartlab.engines.docsParser.finance.audit", "audit", "감사의견", lambda r: r.opinionDf),
-    ("dartlab.engines.docsParser.finance.boardOfDirectors", "boardOfDirectors", "이사회", lambda r: r.boardDf),
-    ("dartlab.engines.docsParser.finance.capitalChange", "capitalChange", "자본변동", lambda r: r.capitalDf),
-    ("dartlab.engines.docsParser.finance.contingentLiability", "contingentLiability", "우발부채", lambda r: r.guaranteeDf),
-    ("dartlab.engines.docsParser.finance.internalControl", "internalControl", "내부통제", lambda r: r.controlDf),
-    ("dartlab.engines.docsParser.finance.relatedPartyTx", "relatedPartyTx", "관계자거래", lambda r: r.revenueTxDf),
-    ("dartlab.engines.docsParser.finance.rnd", "rnd", "R&D", lambda r: r.rndDf),
-    ("dartlab.engines.docsParser.finance.sanction", "sanction", "제재현황", lambda r: r.sanctionDf),
-    ("dartlab.engines.docsParser.finance.affiliateGroup", "affiliateGroup", "계열사", lambda r: r.affiliateDf),
-    ("dartlab.engines.docsParser.finance.fundraising", "fundraising", "증자감자", lambda r: r.issuanceDf),
-    ("dartlab.engines.docsParser.finance.productService", "productService", "주요제품", lambda r: r.productDf),
-    ("dartlab.engines.docsParser.finance.salesOrder", "salesOrder", "매출수주", lambda r: r.salesDf),
-    ("dartlab.engines.docsParser.finance.riskDerivative", "riskDerivative", "위험관리", lambda r: r.fxDf),
-    ("dartlab.engines.docsParser.finance.articlesOfIncorporation", "articlesOfIncorporation", "정관", lambda r: r.changesDf),
-    ("dartlab.engines.docsParser.finance.otherFinance", "otherFinance", "기타재무", lambda r: r.badDebtDf),
-    ("dartlab.engines.docsParser.finance.companyHistory", "companyHistory", "연혁", lambda r: r.eventsDf),
-    ("dartlab.engines.docsParser.finance.shareholderMeeting", "shareholderMeeting", "주주총회", lambda r: r.agendaDf),
-    ("dartlab.engines.docsParser.finance.auditSystem", "auditSystem", "감사제도", lambda r: r.committeeDf),
-    ("dartlab.engines.docsParser.finance.investmentInOther", "investmentInOther", "타법인출자", lambda r: r.investmentDf),
-    ("dartlab.engines.docsParser.finance.companyOverviewDetail", "companyOverviewDetail", "회사개요",
+    ("dartlab.engines.dart.docs.finance.dividend", "dividend", "배당", lambda r: r.timeSeries),
+    ("dartlab.engines.dart.docs.finance.majorHolder", "majorHolder", "최대주주", lambda r: r.timeSeries),
+    ("dartlab.engines.dart.docs.finance.employee", "employee", "직원현황", lambda r: r.timeSeries),
+    ("dartlab.engines.dart.docs.finance.subsidiary", "subsidiary", "자회사투자", lambda r: r.timeSeries),
+    ("dartlab.engines.dart.docs.finance.bond", "bond", "채무증권", lambda r: r.timeSeries),
+    ("dartlab.engines.dart.docs.finance.shareCapital", "shareCapital", "주식현황", lambda r: r.timeSeries),
+    ("dartlab.engines.dart.docs.finance.executive", "executive", "임원현황", lambda r: r.executiveDf),
+    ("dartlab.engines.dart.docs.finance.executivePay", "executivePay", "임원보수", lambda r: r.payByTypeDf),
+    ("dartlab.engines.dart.docs.finance.audit", "audit", "감사의견", lambda r: r.opinionDf),
+    ("dartlab.engines.dart.docs.finance.boardOfDirectors", "boardOfDirectors", "이사회", lambda r: r.boardDf),
+    ("dartlab.engines.dart.docs.finance.capitalChange", "capitalChange", "자본변동", lambda r: r.capitalDf),
+    ("dartlab.engines.dart.docs.finance.contingentLiability", "contingentLiability", "우발부채", lambda r: r.guaranteeDf),
+    ("dartlab.engines.dart.docs.finance.internalControl", "internalControl", "내부통제", lambda r: r.controlDf),
+    ("dartlab.engines.dart.docs.finance.relatedPartyTx", "relatedPartyTx", "관계자거래", lambda r: r.revenueTxDf),
+    ("dartlab.engines.dart.docs.finance.rnd", "rnd", "R&D", lambda r: r.rndDf),
+    ("dartlab.engines.dart.docs.finance.sanction", "sanction", "제재현황", lambda r: r.sanctionDf),
+    ("dartlab.engines.dart.docs.finance.affiliateGroup", "affiliateGroup", "계열사", lambda r: r.affiliateDf),
+    ("dartlab.engines.dart.docs.finance.fundraising", "fundraising", "증자감자", lambda r: r.issuanceDf),
+    ("dartlab.engines.dart.docs.finance.productService", "productService", "주요제품", lambda r: r.productDf),
+    ("dartlab.engines.dart.docs.finance.salesOrder", "salesOrder", "매출수주", lambda r: r.salesDf),
+    ("dartlab.engines.dart.docs.finance.riskDerivative", "riskDerivative", "위험관리", lambda r: r.fxDf),
+    ("dartlab.engines.dart.docs.finance.articlesOfIncorporation", "articlesOfIncorporation", "정관", lambda r: r.changesDf),
+    ("dartlab.engines.dart.docs.finance.otherFinance", "otherFinance", "기타재무", lambda r: r.badDebtDf),
+    ("dartlab.engines.dart.docs.finance.companyHistory", "companyHistory", "연혁", lambda r: r.eventsDf),
+    ("dartlab.engines.dart.docs.finance.shareholderMeeting", "shareholderMeeting", "주주총회", lambda r: r.agendaDf),
+    ("dartlab.engines.dart.docs.finance.auditSystem", "auditSystem", "감사제도", lambda r: r.committeeDf),
+    ("dartlab.engines.dart.docs.finance.investmentInOther", "investmentInOther", "타법인출자", lambda r: r.investmentDf),
+    ("dartlab.engines.dart.docs.finance.companyOverviewDetail", "companyOverviewDetail", "회사개요",
      lambda r: {
          "foundedDate": r.foundedDate, "listedDate": r.listedDate,
          "address": r.address, "ceo": r.ceo,
          "mainBusiness": r.mainBusiness, "website": r.website,
      }),
     # 공시 서술
-    ("dartlab.engines.docsParser.disclosure.business", "business", "사업의내용", lambda r: r.sections),
-    ("dartlab.engines.docsParser.disclosure.companyOverview", "companyOverview", "회사개요정량", None),
-    ("dartlab.engines.docsParser.disclosure.mdna", "mdna", "MD&A", lambda r: r.overview),
-    ("dartlab.engines.docsParser.disclosure.rawMaterial", "rawMaterial", "원재료설비", None),
+    ("dartlab.engines.dart.docs.disclosure.business", "business", "사업의내용", lambda r: r.sections),
+    ("dartlab.engines.dart.docs.disclosure.companyOverview", "companyOverview", "회사개요정량", None),
+    ("dartlab.engines.dart.docs.disclosure.mdna", "mdna", "MD&A", lambda r: r.overview),
+    ("dartlab.engines.dart.docs.disclosure.rawMaterial", "rawMaterial", "원재료설비", None),
 ]
 
 # 모듈명 → 레지스트리 인덱스
@@ -138,7 +138,7 @@ class _ReportAccessor:
     def _pivot(self, name: str) -> Any:
         if name in self._cache:
             return self._cache[name]
-        from dartlab.engines.reportEngine import (
+        from dartlab.engines.dart.report import (
             pivotDividend,
             pivotEmployee,
             pivotMajorHolder,
@@ -164,7 +164,7 @@ class _ReportAccessor:
         cacheKey = f"_extract_{apiType}"
         if cacheKey in self._cache:
             return self._cache[cacheKey]
-        from dartlab.engines.reportEngine import extractClean
+        from dartlab.engines.dart.report import extractClean
         result = extractClean(self._company.stockCode, apiType)
         self._cache[cacheKey] = result
         return result
@@ -174,7 +174,7 @@ class _ReportAccessor:
         cacheKey = f"_annual_{apiType}_{quarterNum}"
         if cacheKey in self._cache:
             return self._cache[cacheKey]
-        from dartlab.engines.reportEngine import extractAnnual as _extractAnnual
+        from dartlab.engines.dart.report import extractAnnual as _extractAnnual
         result = _extractAnnual(self._company.stockCode, apiType, quarterNum)
         self._cache[cacheKey] = result
         return result
@@ -205,7 +205,7 @@ class _ReportAccessor:
         return self._pivot("audit")
 
     def __repr__(self):
-        from dartlab.engines.reportEngine.types import API_TYPES
+        from dartlab.engines.dart.report.types import API_TYPES
         return f"ReportAccessor({len(API_TYPES)} apiTypes)"
 
 
@@ -247,7 +247,7 @@ class Company:
             self.corpName = codeToName(self.stockCode)
 
         if self._hasFinance:
-            from dartlab.engines.financeEngine.pivot import buildTimeseries
+            from dartlab.engines.dart.finance.pivot import buildTimeseries
             ts = buildTimeseries(self.stockCode)
             if ts is not None:
                 self._cache["_finance_q_CFS"] = ts
@@ -264,7 +264,7 @@ class Company:
         from dartlab import config
         if config.verbose:
             from dartlab.display import printRepr
-            from dartlab.engines.docsParser.notes import _REGISTRY as notesRegistry
+            from dartlab.engines.dart.docs.notes import _REGISTRY as notesRegistry
             nProps = len([p for p in _ALL_PROPERTIES if p[0] not in ("BS", "IS", "CF")])
             nNotes = len(notesRegistry) if self._hasDocs else 0
             printRepr(self.corpName, self.stockCode, nProps, nNotes)
@@ -274,7 +274,7 @@ class Company:
     def guide(self):
         """전체 사용 가이드 출력."""
         from dartlab.display import printGuide
-        from dartlab.engines.docsParser.notes import _REGISTRY as notesRegistry
+        from dartlab.engines.dart.docs.notes import _REGISTRY as notesRegistry
         props = [p[0] for p in _ALL_PROPERTIES if p[0] not in ("BS", "IS", "CF")]
         if self._hasDocs:
             noteKeys = list(notesRegistry.keys())
@@ -307,7 +307,7 @@ class Company:
         if cacheKey in self._cache:
             return self._cache[cacheKey]
         result = _import_and_call(
-            "dartlab.engines.docsParser.finance.notesDetail", "notesDetail",
+            "dartlab.engines.dart.docs.finance.notesDetail", "notesDetail",
             self.stockCode, keyword=keyword,
         )
         self._cache[cacheKey] = result
@@ -622,7 +622,7 @@ class Company:
         if config.verbose:
             print(f"  ▶ {self.corpName} · 주주현황")
         result = _import_and_call(
-            "dartlab.engines.docsParser.finance.majorHolder", "holderOverview", self.stockCode,
+            "dartlab.engines.dart.docs.finance.majorHolder", "holderOverview", self.stockCode,
         )
         self._cache[cacheKey] = result
         return result
@@ -646,7 +646,7 @@ class Company:
         if cacheKey in self._cache:
             return self._cache[cacheKey]
 
-        from dartlab.engines.financeEngine.pivot import buildTimeseries, buildAnnual, buildCumulative
+        from dartlab.engines.dart.finance.pivot import buildTimeseries, buildAnnual, buildCumulative
 
         builders = {"q": buildTimeseries, "y": buildAnnual, "cum": buildCumulative}
         builder = builders.get(period, buildTimeseries)
@@ -692,7 +692,7 @@ class Company:
         cacheKey = f"_ratios_{fsDivPref}"
         if cacheKey in self._cache:
             return self._cache[cacheKey]
-        from dartlab.engines.financeEngine.ratios import calcRatios
+        from dartlab.engines.dart.finance.ratios import calcRatios
         ts = self._getFinanceBuild("q", fsDivPref)
         if ts is None:
             return None
@@ -782,7 +782,7 @@ class Company:
         cacheKey = "_sector"
         if cacheKey in self._cache:
             return self._cache[cacheKey]
-        from dartlab.engines.sectorEngine import classify
+        from dartlab.engines.sector import classify
         kindDf = getKindList()
         row = kindDf.filter(pl.col("종목코드") == self.stockCode)
         kindIndustry = row["업종"][0] if row.height > 0 and "업종" in kindDf.columns else None
@@ -807,7 +807,7 @@ class Company:
         cacheKey = "_sectorParams"
         if cacheKey in self._cache:
             return self._cache[cacheKey]
-        from dartlab.engines.sectorEngine import getParams
+        from dartlab.engines.sector import getParams
         result = getParams(self.sector)
         self._cache[cacheKey] = result
         return result
@@ -825,7 +825,7 @@ class Company:
 
         Example::
 
-            from dartlab.engines.insightEngine import buildSnapshot
+            from dartlab.engines.insight import buildSnapshot
             buildSnapshot()
 
             c = Company("005930")
@@ -837,7 +837,7 @@ class Company:
         cacheKey = "_rank"
         if cacheKey in self._cache:
             return self._cache[cacheKey]
-        from dartlab.engines.insightEngine.rank import getRank
+        from dartlab.engines.rank.rank import getRank
         result = getRank(self.stockCode)
         self._cache[cacheKey] = result
         return result
@@ -864,7 +864,7 @@ class Company:
         cacheKey = "_insights"
         if cacheKey in self._cache:
             return self._cache[cacheKey]
-        from dartlab.engines.insightEngine import analyze
+        from dartlab.engines.insight import analyze
         result = analyze(self.stockCode, company=self)
         self._cache[cacheKey] = result
         return result
@@ -880,7 +880,7 @@ class Company:
             finance 항목은 "timeseries", "ratios" 키로 포함.
         """
         from dartlab import config
-        from dartlab.engines.docsParser.notes import _REGISTRY as notes_registry
+        from dartlab.engines.dart.docs.notes import _REGISTRY as notes_registry
 
         nNotes = len(notes_registry) if self._hasDocs else 0
         total = len(_ALL_PROPERTIES) + nNotes + 3
@@ -999,13 +999,13 @@ class Company:
             c.ask("배당 추세", include=["dividend", "IS"])
             c.ask("부채 리스크", provider="ollama", model="llama3.1")
         """
-        from dartlab.engines.llmAnalyzer import get_config
-        from dartlab.engines.llmAnalyzer.context import (
+        from dartlab.engines.ai import get_config
+        from dartlab.engines.ai.context import (
             build_context, build_compact_context, _get_sector,
         )
-        from dartlab.engines.llmAnalyzer.pipeline import run_pipeline
-        from dartlab.engines.llmAnalyzer.prompts import build_system_prompt, _classify_question
-        from dartlab.engines.llmAnalyzer.providers import create_provider
+        from dartlab.engines.ai.pipeline import run_pipeline
+        from dartlab.engines.ai.prompts import build_system_prompt, _classify_question
+        from dartlab.engines.ai.providers import create_provider
 
         config_ = get_config()
         overrides = {
@@ -1101,10 +1101,10 @@ class Company:
             c.chat("재무 건전성을 분석하고 이상 징후를 찾아줘")
             c.chat("배당 추세", provider="ollama", model="llama3.1")
         """
-        from dartlab.engines.llmAnalyzer import get_config
-        from dartlab.engines.llmAnalyzer.agent import AGENT_SYSTEM_ADDITION, agent_loop
-        from dartlab.engines.llmAnalyzer.prompts import build_system_prompt
-        from dartlab.engines.llmAnalyzer.providers import create_provider
+        from dartlab.engines.ai import get_config
+        from dartlab.engines.ai.agent import AGENT_SYSTEM_ADDITION, agent_loop
+        from dartlab.engines.ai.prompts import build_system_prompt
+        from dartlab.engines.ai.providers import create_provider
 
         config_ = get_config()
         overrides = {

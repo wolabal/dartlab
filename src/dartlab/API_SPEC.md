@@ -14,22 +14,29 @@
 dartlab/
 ├── core/                          # 데이터 로딩, 보고서 선택, 테이블 파싱
 ├── engines/
-│   ├── docsParser/                # 공시 문서 파싱 엔진
-│   │   ├── finance/               # 정량 재무 데이터 (36개 모듈)
-│   │   ├── disclosure/            # 공시 서술형 섹션 (4개 모듈)
-│   │   └── notes.py               # K-IFRS 주석 통합 접근
-│   └── financeEngine/             # 재무 숫자 데이터 엔진
-│       ├── mapper.py              # XBRL 계정 → snakeId 매핑
-│       ├── pivot.py               # 시계열 빌드 (분기/연도/누적)
-│       ├── extract.py             # 값 추출 (TTM, Latest 등)
-│       └── ratios.py              # 재무비율 계산
+│   ├── dart/                      # L1: DART 데이터 소스
+│   │   ├── docs/                  # 공시 문서 파싱
+│   │   │   ├── finance/           # 정량 재무 데이터 (36개 모듈)
+│   │   │   ├── disclosure/        # 공시 서술형 섹션 (4개 모듈)
+│   │   │   └── notes.py           # K-IFRS 주석 통합 접근
+│   │   ├── finance/               # XBRL 재무제표 정규화
+│   │   └── report/                # 정기보고서 API 데이터
+│   ├── sector/                    # L2: 섹터 분류 (WICS 11섹터)
+│   ├── insight/                   # L2: 인사이트 등급 (7영역 + 이상치 + 요약)
+│   ├── rank/                      # L2: 시장 규모 순위
+│   └── ai/                        # L3: LLM 분석 (Ollama 등)
 ├── company.py                     # 통합 접근 래퍼 (property 기반)
 └── config.py                      # 전역 설정 (verbose)
 ```
 
-- `engines/docsParser/finance/` — 공시 문서 기반 숫자·테이블: 재무제표, 배당, 주주, 자본 등
-- `engines/docsParser/disclosure/` — 공시 문서 기반 텍스트·서술: 사업의 내용, MD&A 등
-- `engines/financeEngine/` — 재무 숫자 데이터 엔진: XBRL 매핑, 시계열, 비율 계산
+- `engines/dart/docs/finance/` — 공시 문서 기반 숫자·테이블: 재무제표, 배당, 주주, 자본 등
+- `engines/dart/docs/disclosure/` — 공시 문서 기반 텍스트·서술: 사업의 내용, MD&A 등
+- `engines/dart/finance/` — XBRL 재무제표 정규화: 계정 매핑, 시계열, 비율 계산
+- `engines/dart/report/` — 정기보고서 API: 배당, 직원, 최대주주, 임원, 감사
+- `engines/sector/` — WICS 섹터 분류: KSIC/키워드/오버라이드 3단계
+- `engines/insight/` — 7영역 등급 분석 + 이상치 탐지 + 종합 요약
+- `engines/rank/` — 매출/자산/성장률 전체+섹터내 순위
+- `engines/ai/` — LLM 기반 대화형 분석
 
 ## 전역 설정
 
@@ -201,7 +208,7 @@ series 구조: `{"BS": {"snakeId": [값...]}, "IS": {...}, "CF": {...}}`
 ### finance.summary — fsSummary
 
 ```python
-from dartlab.engines.docsParser.finance.summary import fsSummary
+from dartlab.engines.dart.docs.finance.summary import fsSummary
 result = fsSummary("005930", ifrsOnly=True, period="y")
 ```
 
@@ -223,7 +230,7 @@ result = fsSummary("005930", ifrsOnly=True, period="y")
 ### finance.statements
 
 ```python
-from dartlab.engines.docsParser.finance.statements import statements
+from dartlab.engines.dart.docs.finance.statements import statements
 result = statements("005930", ifrsOnly=True, period="y")
 ```
 
@@ -555,7 +562,7 @@ result = statements("005930", ifrsOnly=True, period="y")
 ### finance.notesDetail
 
 ```python
-from dartlab.engines.docsParser.finance.notesDetail import notesDetail
+from dartlab.engines.dart.docs.finance.notesDetail import notesDetail
 result = notesDetail("005930", keyword="재고자산")
 ```
 
@@ -677,7 +684,7 @@ result = notesDetail("005930", keyword="재고자산")
 ### 시계열 빌드
 
 ```python
-from dartlab.engines.financeEngine import buildTimeseries, buildAnnual, buildCumulative
+from dartlab.engines.dart.finance import buildTimeseries, buildAnnual, buildCumulative
 ```
 
 | 함수 | 시그니처 | 설명 |
@@ -700,7 +707,7 @@ from dartlab.engines.financeEngine import buildTimeseries, buildAnnual, buildCum
 ### 값 추출
 
 ```python
-from dartlab.engines.financeEngine import getTTM, getLatest, getAnnualValues, getRevenueGrowth3Y
+from dartlab.engines.dart.finance import getTTM, getLatest, getAnnualValues, getRevenueGrowth3Y
 ```
 
 | 함수 | 시그니처 | 설명 |
@@ -713,7 +720,7 @@ from dartlab.engines.financeEngine import getTTM, getLatest, getAnnualValues, ge
 ### 비율 계산
 
 ```python
-from dartlab.engines.financeEngine import calcRatios
+from dartlab.engines.dart.finance import calcRatios
 ```
 
 | 함수 | 시그니처 | 설명 |
@@ -751,10 +758,268 @@ from dartlab.engines.financeEngine import calcRatios
 ### 계정 매핑
 
 ```python
-from dartlab.engines.financeEngine import AccountMapper
+from dartlab.engines.dart.finance import AccountMapper
 
 mapper = AccountMapper.get()
 snakeId = mapper.map("ifrs-full_Revenue", "매출액")  # → "revenue"
 ```
 
 매핑 파이프라인: ID prefix 제거 → ID_SYNONYMS → ACCOUNT_NAME_SYNONYMS → CORE_MAP → accountMappings.json → 괄호 제거 재시도
+
+---
+
+## reportEngine (정기보고서)
+
+OpenDART 정기보고서 API parquet에서 배당, 직원, 최대주주, 임원, 감사 등 구조화된 데이터를 추출한다.
+
+```python
+from dartlab.engines.dart.report import extractResult, pivotDividend, pivotEmployee
+```
+
+### 추출 파이프라인
+
+| 함수 | 시그니처 | 설명 |
+|------|----------|------|
+| `extractRaw` | `(stockCode) → DataFrame \| None` | 원본 parquet 로드 |
+| `extractClean` | `(stockCode) → DataFrame \| None` | 정제된 DataFrame |
+| `extractAnnual` | `(stockCode, apiType) → DataFrame \| None` | apiType별 연도별 추출 |
+| `extractResult` | `(stockCode, apiType) → DataFrame \| None` | 최종 정제 결과 |
+
+### Pivot 함수
+
+| 함수 | 시그니처 | 반환 타입 | 설명 |
+|------|----------|-----------|------|
+| `pivotDividend` | `(stockCode) → DividendResult \| None` | 배당 시계열 |
+| `pivotEmployee` | `(stockCode) → EmployeeResult \| None` | 직원 현황 시계열 |
+| `pivotMajorHolder` | `(stockCode) → MajorHolderResult \| None` | 최대주주 시계열 |
+| `pivotExecutive` | `(stockCode) → ExecutiveResult \| None` | 임원 현황 시계열 |
+| `pivotAudit` | `(stockCode) → AuditResult \| None` | 감사 현황 시계열 |
+
+### API_TYPES
+
+| apiType | 설명 |
+|---------|------|
+| `dividend` | 배당 |
+| `employee` | 직원 |
+| `majorShareholder` | 최대주주 |
+| `executive` | 임원 |
+| `auditOpinion` | 감사의견 |
+
+---
+
+## sectorEngine (섹터 분류)
+
+KIND 업종명 + 주요제품 키워드로 WICS 11섹터 투자 관점 분류.
+
+```python
+from dartlab.engines.sector import classify, getParams
+```
+
+### classify
+
+```python
+info = classify("삼성전자", kindIndustry="통신 및 방송 장비 제조업")
+```
+
+| 파라미터 | 타입 | 설명 |
+|----------|------|------|
+| `corpName` | str | 기업명 |
+| `kindIndustry` | str \| None | KIND 업종명 |
+| `products` | str \| None | 주요제품 (키워드 분석용) |
+
+반환: `SectorInfo`
+
+3단계 분류 우선순위
+1. **수동 오버라이드** — 대형주 ~100종목 (confidence=1.0)
+2. **주요제품 키워드** — 300+ 키워드 패턴 매칭 (confidence=0.75)
+3. **KSIC 업종명 매핑** — KIND 업종코드 기반 (confidence=0.5)
+
+### SectorInfo
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| sector | Sector | WICS 대분류 (11 + UNKNOWN) |
+| industryGroup | IndustryGroup | WICS 중분류 |
+| confidence | float | 분류 신뢰도 (0.0 ~ 1.0) |
+| source | str | 분류 근거 ("override", "keyword", "ksic") |
+
+### Sector (Enum)
+
+`ENERGY`, `MATERIALS`, `INDUSTRIALS`, `CONSUMER_DISC`, `CONSUMER_STAPLES`, `HEALTHCARE`, `FINANCIALS`, `IT`, `COMMUNICATION`, `UTILITIES`, `REAL_ESTATE`, `UNKNOWN`
+
+### getParams
+
+```python
+params = getParams(info)
+params.discountRate    # 13.0
+params.perMultiple     # 15
+```
+
+| 파라미터 | 타입 | 설명 |
+|----------|------|------|
+| `sectorInfo` | SectorInfo | 분류 결과 |
+
+반환: `SectorParams` (중분류 우선, 없으면 대분류 fallback)
+
+### SectorParams
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| discountRate | float | 할인율 (%) |
+| growthRate | float | 성장률 (%) |
+| perMultiple | float | PER 멀티플 |
+| pbrMultiple | float | PBR 멀티플 |
+| evEbitdaMultiple | float | EV/EBITDA 멀티플 |
+| label | str | 섹터 라벨 |
+
+---
+
+## insightEngine (인사이트 등급)
+
+7영역 등급 분석 + 이상치 탐지 + 종합 요약.
+
+```python
+from dartlab.engines.insight import analyze
+
+result = analyze("005930")
+result.grades()        # {'performance': 'A', 'profitability': 'B', ...}
+result.anomalies       # [Anomaly(...), ...]
+result.summary         # "삼성전자는 실적, 재무건전성 등..."
+result.profile         # "premium"
+```
+
+### analyze
+
+| 파라미터 | 타입 | 설명 |
+|----------|------|------|
+| `stockCode` | str | 종목코드 (6자리) |
+| `company` | Company \| None | Company 인스턴스 (None이면 내부 생성) |
+
+반환: `AnalysisResult | None` (데이터 부족 시 None)
+
+### AnalysisResult
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| corpName | str | 기업명 |
+| stockCode | str | 종목코드 |
+| isFinancial | bool | 금융업 여부 |
+| performance | InsightResult | 실적 분석 (매출/영업이익 성장률) |
+| profitability | InsightResult | 수익성 분석 (영업이익률, ROE) |
+| health | InsightResult | 재무건전성 분석 (부채비율, 유동비율) |
+| cashflow | InsightResult | 현금흐름 분석 (영업CF, FCF) |
+| governance | InsightResult | 지배구조 분석 (감사의견, 사외이사) |
+| risk | InsightResult | 리스크 종합 |
+| opportunity | InsightResult | 기회 종합 |
+| anomalies | list[Anomaly] | 이상치 목록 |
+| summary | str | 종합 요약 텍스트 |
+| profile | str | 투자 프로파일 ("premium", "growth", "value", "turnaround", "caution") |
+
+#### grades()
+
+```python
+result.grades()
+# {'performance': 'A', 'profitability': 'B', 'health': 'A',
+#  'cashflow': 'B', 'governance': 'A', 'risk': 'B', 'opportunity': 'B'}
+```
+
+등급 체계: A (우수) → B (양호) → C (보통) → D (주의) → F (위험)
+
+### InsightResult
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| grade | str | 등급 (A/B/C/D/F) |
+| summary | str | 요약 텍스트 |
+| details | list[str] | 상세 근거 |
+| risks | list[Flag] | 리스크 플래그 |
+| opportunities | list[Flag] | 기회 플래그 |
+
+### Anomaly
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| severity | str | 심각도 ("high", "medium", "low") |
+| category | str | 카테고리 |
+| text | str | 설명 텍스트 |
+| value | float \| None | 관련 수치 |
+
+### Flag
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| level | str | 레벨 |
+| category | str | 카테고리 |
+| text | str | 설명 |
+
+---
+
+## rankEngine (시장 규모 순위)
+
+전체 시장 + 섹터 내 순위를 산출한다. 매출, 자산, 성장률 3개 축으로 전체 순위와 섹터 내 순위를 계산한다.
+
+```python
+from dartlab.engines.rank import getRank, getRankOrBuild, buildSnapshot
+
+rank = getRankOrBuild("005930")
+rank.revenueRank        # 매출 전체 순위
+rank.sizeClass          # "large" | "mid" | "small"
+```
+
+### buildSnapshot
+
+전체 종목을 순회하여 랭크 스냅샷을 생성하고 로컬 캐시에 저장한다. (소요 시간 ~2분)
+
+| 파라미터 | 타입 | 설명 |
+|----------|------|------|
+| `verbose` | bool | 진행 표시 (기본 True) |
+
+반환: `dict[str, RankInfo]` (stockCode → RankInfo 매핑)
+
+### getRank
+
+캐시된 스냅샷에서 조회. 스냅샷이 없으면 None.
+
+| 파라미터 | 타입 | 설명 |
+|----------|------|------|
+| `stockCode` | str | 종목코드 |
+
+반환: `RankInfo | None`
+
+### getRankOrBuild
+
+캐시된 스냅샷에서 조회. 없으면 buildSnapshot 후 조회.
+
+| 파라미터 | 타입 | 설명 |
+|----------|------|------|
+| `stockCode` | str | 종목코드 |
+| `verbose` | bool | 진행 표시 (기본 True) |
+
+반환: `RankInfo | None`
+
+### RankInfo
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| stockCode | str | 종목코드 |
+| corpName | str | 기업명 |
+| sector | str | WICS 대분류 |
+| industryGroup | str | WICS 중분류 |
+| revenue | float \| None | 매출 |
+| totalAssets | float \| None | 총자산 |
+| revenueGrowth3Y | float \| None | 매출 3년 CAGR |
+| revenueRank | int \| None | 매출 전체 순위 |
+| revenueTotal | int | 매출 순위 모수 |
+| revenueRankInSector | int \| None | 매출 섹터 내 순위 |
+| revenueSectorTotal | int | 섹터 내 모수 |
+| assetRank | int \| None | 자산 전체 순위 |
+| assetTotal | int | 자산 순위 모수 |
+| assetRankInSector | int \| None | 자산 섹터 내 순위 |
+| assetSectorTotal | int | 섹터 내 모수 |
+| growthRank | int \| None | 성장률 전체 순위 |
+| growthTotal | int | 성장률 순위 모수 |
+| growthRankInSector | int \| None | 성장률 섹터 내 순위 |
+| growthSectorTotal | int | 섹터 내 모수 |
+| sizeClass | str | 규모 ("large" \| "mid" \| "small") |
+
+sizeClass 기준: 매출 상위 10% → large, 30% → mid, 나머지 → small

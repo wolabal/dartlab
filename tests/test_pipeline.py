@@ -3,7 +3,7 @@
 import polars as pl
 import pytest
 
-from dartlab.engines.llmAnalyzer.pipeline import (
+from dartlab.engines.ai.pipeline import (
 	classify_question,
 	run_pipeline,
 	_df_to_simple_md,

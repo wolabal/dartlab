@@ -30,20 +30,22 @@ app = FastAPI(title="DartLab", version=dartlab.__version__ if hasattr(dartlab, "
 
 @app.on_event("startup")
 async def _preload_ollama():
-	"""서버 시작 시 Ollama 모델을 메모리에 미리 로딩 (cold start 제거)."""
-	try:
-		from dartlab.engines.llmAnalyzer.providers import create_provider
-		from dartlab.engines.llmAnalyzer.types import LLMConfig
+	"""서버 시작 후 Ollama 모델을 백그라운드에서 미리 로딩 (cold start 제거)."""
+	async def _do_preload():
+		await asyncio.sleep(2)
+		try:
+			from dartlab.engines.ai.providers import create_provider
+			from dartlab.engines.ai.types import LLMConfig
 
-		config = LLMConfig(provider="ollama")
-		provider = create_provider(config)
-		if hasattr(provider, "preload") and provider.check_available():
-			import asyncio
-			ok = await asyncio.to_thread(provider.preload)
-			if ok:
-				print(f"  Ollama 모델 preload 완료: {provider.resolved_model}")
-	except Exception:
-		pass
+			config = LLMConfig(provider="ollama")
+			provider = create_provider(config)
+			if hasattr(provider, "preload") and provider.check_available():
+				ok = await asyncio.to_thread(provider.preload)
+				if ok:
+					print(f"  Ollama 모델 preload 완료: {provider.resolved_model}")
+		except Exception:
+			pass
+	asyncio.create_task(_do_preload())
 
 
 app.add_middleware(
@@ -84,8 +86,8 @@ class ConfigureRequest(BaseModel):
 @app.get("/api/status")
 def api_status():
 	"""LLM provider 상태 확인 (설치/인증/모델 포함)."""
-	from dartlab.engines.llmAnalyzer.providers import create_provider
-	from dartlab.engines.llmAnalyzer.types import LLMConfig
+	from dartlab.engines.ai.providers import create_provider
+	from dartlab.engines.ai.types import LLMConfig
 
 	# TODO: claude-code, codex, openai, claude — CLI/API 키 문제 해결 후 복원
 	# providers_list = ["codex", "claude-code", "ollama", "openai", "claude"]
@@ -116,7 +118,7 @@ def api_status():
 	# Ollama 추가 상태 (설치/실행/GPU)
 	ollama_detail = {}
 	try:
-		from dartlab.engines.llmAnalyzer.ollama_setup import detect_ollama, get_install_guide
+		from dartlab.engines.ai.ollama_setup import detect_ollama, get_install_guide
 		ollama_info = detect_ollama()
 		ollama_detail["installed"] = ollama_info.get("installed", False)
 		ollama_detail["running"] = ollama_info.get("running", False)
@@ -133,9 +135,9 @@ def api_status():
 @app.post("/api/configure")
 def api_configure(req: ConfigureRequest):
 	"""LLM provider 설정. API 키 검증 포함."""
-	from dartlab.engines.llmAnalyzer import configure, get_config
-	from dartlab.engines.llmAnalyzer.providers import create_provider
-	from dartlab.engines.llmAnalyzer.types import LLMConfig
+	from dartlab.engines.ai import configure, get_config
+	from dartlab.engines.ai.providers import create_provider
+	from dartlab.engines.ai.types import LLMConfig
 
 	# 기존 설정을 유지하면서 새 값만 오버라이드
 	current = get_config()
@@ -170,8 +172,8 @@ def api_configure(req: ConfigureRequest):
 @app.get("/api/models/{provider}")
 def api_models(provider: str):
 	"""Provider별 사용 가능한 모델 목록 — SDK/API 자동 조회, 실패시 fallback."""
-	from dartlab.engines.llmAnalyzer.providers import create_provider
-	from dartlab.engines.llmAnalyzer.types import LLMConfig
+	from dartlab.engines.ai.providers import create_provider
+	from dartlab.engines.ai.types import LLMConfig
 
 	# CLI 기반 provider: 별칭 + 주요 모델ID
 	CLI_MODELS = {
@@ -246,7 +248,7 @@ def api_models(provider: str):
 def _get_api_key(provider: str) -> str | None:
 	"""글로벌 config 또는 환경변수에서 API 키를 가져온다."""
 	import os
-	from dartlab.engines.llmAnalyzer import get_config
+	from dartlab.engines.ai import get_config
 	config = get_config()
 	if config.api_key and config.provider == provider:
 		return config.api_key
@@ -386,7 +388,7 @@ def api_company(code: str):
 def api_company_modules(code: str):
 	"""기업의 사용 가능한 데이터 모듈 목록."""
 	try:
-		from dartlab.engines.llmAnalyzer.context import scan_available_modules
+		from dartlab.engines.ai.context import scan_available_modules
 		c = Company(code)
 		modules = scan_available_modules(c)
 		return {"stockCode": c.stockCode, "corpName": c.corpName, "modules": modules}
@@ -542,7 +544,7 @@ async def api_ask(req: AskRequest):
 	dartlab.verbose = False
 
 	if req.provider or req.model:
-		from dartlab.engines.llmAnalyzer import configure, get_config
+		from dartlab.engines.ai import configure, get_config
 		current = get_config()
 		overrides: dict[str, Any] = {
 			"provider": req.provider or current.provider,
@@ -637,8 +639,8 @@ def _build_history_messages(history: list[HistoryMessage] | None) -> list[dict[s
 
 async def _plain_chat(req: AskRequest):
 	"""종목 없는 순수 LLM 대화."""
-	from dartlab.engines.llmAnalyzer import get_config
-	from dartlab.engines.llmAnalyzer.providers import create_provider
+	from dartlab.engines.ai import get_config
+	from dartlab.engines.ai.providers import create_provider
 
 	config_ = get_config()
 	overrides: dict[str, Any] = {}
@@ -757,8 +759,8 @@ async def _stream_ask(c: Company | None, req: AskRequest, *, not_found_msg: str 
 	  meta → snapshot → context (모듈별, 여러 번) → chunk... → done
 	  tool_call/tool_result 이벤트는 agent_loop 사용 시 추가
 	"""
-	from dartlab.engines.llmAnalyzer import get_config
-	from dartlab.engines.llmAnalyzer.providers import create_provider
+	from dartlab.engines.ai import get_config
+	from dartlab.engines.ai.providers import create_provider
 
 	if not_found_msg:
 		yield {
@@ -794,12 +796,12 @@ async def _stream_ask(c: Company | None, req: AskRequest, *, not_found_msg: str 
 		history_msgs = _build_history_messages(req.history)
 
 		if c:
-			from dartlab.engines.llmAnalyzer.context import (
+			from dartlab.engines.ai.context import (
 				build_context_by_module,
 				detect_year_range, _get_sector,
 			)
-			from dartlab.engines.llmAnalyzer.prompts import build_system_prompt, _classify_question_multi
-			from dartlab.engines.llmAnalyzer.metadata import MODULE_META
+			from dartlab.engines.ai.prompts import build_system_prompt, _classify_question_multi
+			from dartlab.engines.ai.metadata import MODULE_META
 
 			snapshot = await asyncio.to_thread(_build_snapshot, c)
 			if snapshot:
@@ -845,7 +847,7 @@ async def _stream_ask(c: Company | None, req: AskRequest, *, not_found_msg: str 
 				context_text = "\n".join(parts)
 
 			if not use_compact:
-				from dartlab.engines.llmAnalyzer.pipeline import run_pipeline
+				from dartlab.engines.ai.pipeline import run_pipeline
 				pipeline_result = await asyncio.to_thread(
 					run_pipeline, c, req.question, included_tables,
 				)
@@ -892,7 +894,7 @@ async def _stream_ask(c: Company | None, req: AskRequest, *, not_found_msg: str 
 		done_payload: dict[str, Any] = {}
 
 		if use_guided:
-			from dartlab.engines.llmAnalyzer.prompts import GUIDED_SCHEMA, guided_json_to_markdown
+			from dartlab.engines.ai.prompts import GUIDED_SCHEMA, guided_json_to_markdown
 
 			resp = await asyncio.to_thread(llm.complete_json, messages, GUIDED_SCHEMA)
 			raw_json = resp.answer
@@ -920,7 +922,7 @@ async def _stream_ask(c: Company | None, req: AskRequest, *, not_found_msg: str 
 			}
 
 		elif use_tools:
-			from dartlab.engines.llmAnalyzer.agent import agent_loop, AGENT_SYSTEM_ADDITION
+			from dartlab.engines.ai.agent import agent_loop, AGENT_SYSTEM_ADDITION
 
 			messages[0]["content"] += AGENT_SYSTEM_ADDITION
 
@@ -983,7 +985,7 @@ async def _stream_ask(c: Company | None, req: AskRequest, *, not_found_msg: str 
 				}
 
 		if c and full_response_parts:
-			from dartlab.engines.llmAnalyzer.prompts import extract_response_meta
+			from dartlab.engines.ai.prompts import extract_response_meta
 			full_text = "".join(full_response_parts)
 			response_meta = extract_response_meta(full_text)
 			if response_meta.get("grade") or response_meta.get("has_conclusion"):

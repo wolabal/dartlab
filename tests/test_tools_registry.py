@@ -3,7 +3,7 @@
 import polars as pl
 import pytest
 
-from dartlab.engines.llmAnalyzer.tools_registry import (
+from dartlab.engines.ai.tools_registry import (
 	clear_registry,
 	execute_tool,
 	get_tool_schemas,

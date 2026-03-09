@@ -143,7 +143,7 @@ def _cmd_status(args):
 
 
 def _cmd_setup(args):
-	from dartlab.engines.llmAnalyzer.cli_setup import (
+	from dartlab.engines.ai.cli_setup import (
 		detect_claude_code, detect_codex,
 	)
 
@@ -244,8 +244,8 @@ def _setup_ollama():
 
 def _detect_provider() -> str:
 	"""사용 가능한 provider 자동 감지."""
-	from dartlab.engines.llmAnalyzer.providers import create_provider
-	from dartlab.engines.llmAnalyzer.types import LLMConfig
+	from dartlab.engines.ai.providers import create_provider
+	from dartlab.engines.ai.types import LLMConfig
 
 	for prov in ["codex", "claude-code", "ollama"]:
 		config = LLMConfig(provider=prov)

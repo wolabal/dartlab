@@ -2,12 +2,12 @@
 
 import polars as pl
 
-from dartlab.engines.llmAnalyzer.context import (
+from dartlab.engines.ai.context import (
 	_compute_derived_metrics,
 	_resolve_tables,
 	df_to_markdown,
 )
-from dartlab.engines.llmAnalyzer.metadata import MODULE_META, ColumnMeta, ModuleMeta
+from dartlab.engines.ai.metadata import MODULE_META, ColumnMeta, ModuleMeta
 
 
 # ══════════════════════════════════════

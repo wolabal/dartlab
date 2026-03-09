@@ -8,7 +8,7 @@ import subprocess
 import pytest
 from unittest.mock import patch, MagicMock
 
-from dartlab.engines.llmAnalyzer.types import LLMConfig
+from dartlab.engines.ai.types import LLMConfig
 
 _SKIP_CI = pytest.mark.skipif(
 	os.environ.get("CI") == "true" or os.environ.get("GITHUB_ACTIONS") == "true",
@@ -23,7 +23,7 @@ _SKIP_CI = pytest.mark.skipif(
 @_SKIP_CI
 class TestClaudeCodeProvider:
 	def _make_provider(self, model=None):
-		from dartlab.engines.llmAnalyzer.providers.claude_code import ClaudeCodeProvider
+		from dartlab.engines.ai.providers.claude_code import ClaudeCodeProvider
 
 		config = LLMConfig(provider="claude-code", model=model)
 		return ClaudeCodeProvider(config)
@@ -161,7 +161,7 @@ class TestClaudeCodeProvider:
 @_SKIP_CI
 class TestCodexProvider:
 	def _make_provider(self, model=None):
-		from dartlab.engines.llmAnalyzer.providers.codex import CodexProvider
+		from dartlab.engines.ai.providers.codex import CodexProvider
 
 		config = LLMConfig(provider="codex", model=model)
 		return CodexProvider(config)
@@ -275,7 +275,7 @@ class TestCodexProvider:
 
 class TestCliDetection:
 	def test_detect_claude_code_structure(self):
-		from dartlab.engines.llmAnalyzer.cli_setup import detect_claude_code
+		from dartlab.engines.ai.cli_setup import detect_claude_code
 
 		result = detect_claude_code()
 		assert "installed" in result
@@ -283,14 +283,14 @@ class TestCliDetection:
 		assert "version" in result
 
 	def test_detect_codex_structure(self):
-		from dartlab.engines.llmAnalyzer.cli_setup import detect_codex
+		from dartlab.engines.ai.cli_setup import detect_codex
 
 		result = detect_codex()
 		assert "installed" in result
 		assert "version" in result
 
 	def test_claude_code_install_guide(self):
-		from dartlab.engines.llmAnalyzer.cli_setup import get_claude_code_install_guide
+		from dartlab.engines.ai.cli_setup import get_claude_code_install_guide
 
 		guide = get_claude_code_install_guide()
 		assert isinstance(guide, str)
@@ -298,7 +298,7 @@ class TestCliDetection:
 		assert "claude" in guide
 
 	def test_codex_install_guide(self):
-		from dartlab.engines.llmAnalyzer.cli_setup import get_codex_install_guide
+		from dartlab.engines.ai.cli_setup import get_codex_install_guide
 
 		guide = get_codex_install_guide()
 		assert isinstance(guide, str)
@@ -312,24 +312,24 @@ class TestCliDetection:
 
 class TestProviderRegistry:
 	def test_claude_code_in_registry(self):
-		from dartlab.engines.llmAnalyzer.providers import available_providers
+		from dartlab.engines.ai.providers import available_providers
 
 		assert "claude-code" in available_providers()
 
 	def test_codex_in_registry(self):
-		from dartlab.engines.llmAnalyzer.providers import available_providers
+		from dartlab.engines.ai.providers import available_providers
 
 		assert "codex" in available_providers()
 
 	def test_create_claude_code_provider(self):
-		from dartlab.engines.llmAnalyzer.providers import create_provider
+		from dartlab.engines.ai.providers import create_provider
 
 		config = LLMConfig(provider="claude-code")
 		provider = create_provider(config)
 		assert provider.__class__.__name__ == "ClaudeCodeProvider"
 
 	def test_create_codex_provider(self):
-		from dartlab.engines.llmAnalyzer.providers import create_provider
+		from dartlab.engines.ai.providers import create_provider
 
 		config = LLMConfig(provider="codex")
 		provider = create_provider(config)

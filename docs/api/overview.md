@@ -363,9 +363,9 @@ c.get("statements", period="q")      # 분기별 재무제표
 Company 클래스 없이 모듈 함수를 직접 호출할 수도 있다. 전체 Result 객체를 반환한다.
 
 ```python
-from dartlab.finance.summary import fsSummary
-from dartlab.finance.statements import statements
-from dartlab.finance.dividend import dividend
+from dartlab.engines.dart.docs.finance.summary import fsSummary
+from dartlab.engines.dart.docs.finance.statements import statements
+from dartlab.engines.dart.docs.finance.dividend import dividend
 
 result = fsSummary("005930")     # AnalysisResult
 result = statements("005930")   # StatementsResult

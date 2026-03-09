@@ -114,11 +114,6 @@
 						{/each}
 					</div>
 				</div>
-			{:else if message.loading && !message.text}
-				<div class="flex items-center gap-1.5 mb-3 text-[12px] text-dl-text-dim">
-					<Loader2 size={13} class="animate-spin" />
-					<span>{loadingPhase}</span>
-				</div>
 			{/if}
 
 			{#if message.toolEvents?.length > 0}

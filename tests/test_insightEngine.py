@@ -2,40 +2,40 @@
 
 import pytest
 
-from dartlab.engines.insightEngine.types import (
+from dartlab.engines.insight.types import (
     Flag,
     InsightResult,
     Anomaly,
     AnalysisResult,
 )
-from dartlab.engines.insightEngine.detector import (
+from dartlab.engines.insight.detector import (
     detectIncompleteYear,
     detectFinancialSector,
 )
-from dartlab.engines.insightEngine.benchmark import (
+from dartlab.engines.insight.benchmark import (
     getBenchmark,
     sectorAdjustment,
     BENCHMARKS,
     DEFAULT_BENCHMARK,
 )
-from dartlab.engines.insightEngine.rank import RankInfo
-from dartlab.engines.insightEngine.grading import (
+from dartlab.engines.rank.rank import RankInfo
+from dartlab.engines.insight.grading import (
     _scoreToGrade,
     _getGrowthYoY,
     analyzeProfitability,
     analyzeRiskSummary,
     analyzeOpportunitySummary,
 )
-from dartlab.engines.financeEngine.ratios import RatioResult
-from dartlab.engines.sectorEngine.types import Sector
-from dartlab.engines.insightEngine.anomaly import (
+from dartlab.engines.dart.finance.ratios import RatioResult
+from dartlab.engines.sector.types import Sector
+from dartlab.engines.insight.anomaly import (
     _yoyChange,
     detectEarningsQuality,
     detectBalanceSheetShift,
     detectCashBurn,
     runAnomalyDetection,
 )
-from dartlab.engines.insightEngine.summary import (
+from dartlab.engines.insight.summary import (
     _eunNeun,
     _iGa,
     classifyProfile,

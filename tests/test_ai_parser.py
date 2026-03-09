@@ -3,7 +3,7 @@
 import polars as pl
 import pytest
 
-from dartlab.engines.llmAnalyzer.aiParser import (
+from dartlab.engines.ai.aiParser import (
 	Anomaly,
 	_statistical_prescreen,
 	classify_text,

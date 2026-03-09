@@ -4,7 +4,7 @@ import dataclasses
 
 import pytest
 
-from dartlab.engines.llmAnalyzer.metadata import (
+from dartlab.engines.ai.metadata import (
 	MODULE_META,
 	ColumnMeta,
 	ModuleMeta,

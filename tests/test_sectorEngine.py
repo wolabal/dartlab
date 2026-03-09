@@ -1,7 +1,7 @@
 """sectorEngine 테스트."""
 
 import pytest
-from dartlab.engines.sectorEngine import (
+from dartlab.engines.sector import (
     Sector,
     IndustryGroup,
     SectorInfo,
