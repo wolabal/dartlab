@@ -12,12 +12,22 @@ from dartlab.engines.insightEngine.detector import (
     detectIncompleteYear,
     detectFinancialSector,
 )
+from dartlab.engines.insightEngine.benchmark import (
+    getBenchmark,
+    sectorAdjustment,
+    BENCHMARKS,
+    DEFAULT_BENCHMARK,
+)
+from dartlab.engines.insightEngine.rank import RankInfo
 from dartlab.engines.insightEngine.grading import (
     _scoreToGrade,
     _getGrowthYoY,
+    analyzeProfitability,
     analyzeRiskSummary,
     analyzeOpportunitySummary,
 )
+from dartlab.engines.financeEngine.ratios import RatioResult
+from dartlab.engines.sectorEngine.types import Sector
 from dartlab.engines.insightEngine.anomaly import (
     _yoyChange,
     detectEarningsQuality,
@@ -138,6 +148,80 @@ class TestGrading:
         }
         result = analyzeOpportunitySummary(insights)
         assert result.grade == "A"
+
+
+class TestBenchmark:
+    def test_get_benchmark_it(self):
+        bm = getBenchmark(Sector.IT)
+        assert bm.omMedian == 2.7
+        assert bm.roeMedian == 12.7
+        assert bm.n == 466
+
+    def test_get_benchmark_unknown(self):
+        bm = getBenchmark(Sector.UNKNOWN)
+        assert bm == DEFAULT_BENCHMARK
+
+    def test_all_sectors_have_benchmark(self):
+        for s in Sector:
+            if s == Sector.UNKNOWN:
+                continue
+            assert s in BENCHMARKS, f"{s} 벤치마크 누락"
+
+    def test_sector_adjustment_above_q3(self):
+        assert sectorAdjustment(30.0, 2.7, -4.9, 7.3) == 1
+
+    def test_sector_adjustment_below_q1(self):
+        assert sectorAdjustment(-10.0, 2.7, -4.9, 7.3) == -1
+
+    def test_sector_adjustment_middle(self):
+        assert sectorAdjustment(3.0, 2.7, -4.9, 7.3) == 0
+
+    def test_sector_adjustment_none(self):
+        assert sectorAdjustment(None, 2.7, -4.9, 7.3) == 0
+
+    def test_profitability_with_sector_boost(self):
+        ratios = RatioResult(operatingMargin=10.0, roe=15.0)
+        result = analyzeProfitability(ratios, {}, isFinancial=False, sector=Sector.COMMUNICATION)
+        assert any("섹터 보정" in d for d in result.details)
+
+    def test_profitability_no_sector_adjustment(self):
+        ratios = RatioResult(operatingMargin=5.0, roe=12.0)
+        result = analyzeProfitability(ratios, {}, isFinancial=False, sector=Sector.IT)
+        sectorDetails = [d for d in result.details if "섹터 보정" in d]
+        assert len(sectorDetails) == 0
+
+
+class TestRank:
+    def test_rank_info_repr(self):
+        ri = RankInfo(
+            stockCode="005930", corpName="삼성전자", sector="IT", industryGroup="반도체와반도체장비",
+            revenue=11e12, totalAssets=5e12,
+            revenueRank=2, revenueTotal=2192,
+            revenueRankInSector=2, revenueSectorTotal=467,
+            sizeClass="large",
+        )
+        r = repr(ri)
+        assert "삼성전자" in r
+        assert "2/2192" in r
+        assert "large" in r
+
+    def test_rank_info_defaults(self):
+        ri = RankInfo(stockCode="999999", corpName="테스트", sector="기타", industryGroup="기타")
+        assert ri.revenueRank is None
+        assert ri.sizeClass == ""
+        assert ri.revenue is None
+
+    def test_rank_info_size_class(self):
+        ri = RankInfo(
+            stockCode="000001", corpName="대형사", sector="IT", industryGroup="반도체와반도체장비",
+            revenueRank=10, revenueTotal=2000, sizeClass="large",
+        )
+        assert ri.sizeClass == "large"
+        ri2 = RankInfo(
+            stockCode="000002", corpName="소형사", sector="IT", industryGroup="반도체와반도체장비",
+            revenueRank=1500, revenueTotal=2000, sizeClass="small",
+        )
+        assert ri2.sizeClass == "small"
 
 
 class TestAnomaly:

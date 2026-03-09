@@ -9,8 +9,10 @@ from typing import Optional, TYPE_CHECKING
 
 from dartlab.engines.financeEngine.extract import getLatest, getAnnualValues
 from dartlab.engines.financeEngine.ratios import RatioResult
+from dartlab.engines.insightEngine.benchmark import getBenchmark, sectorAdjustment
 from dartlab.engines.insightEngine.detector import detectIncompleteYear
 from dartlab.engines.insightEngine.types import Flag, InsightResult
+from dartlab.engines.sectorEngine.types import Sector
 
 if TYPE_CHECKING:
     from dartlab.company import Company
@@ -160,8 +162,9 @@ def analyzePerformance(
 
 def analyzeProfitability(
     ratios: RatioResult,
-    series: dict,
+    aSeries: dict,
     isFinancial: bool = False,
+    sector: Sector = Sector.UNKNOWN,
 ) -> InsightResult:
     """수익성 분석."""
     details: list[str] = []
@@ -170,7 +173,7 @@ def analyzeProfitability(
     score = 0
 
     if isFinancial:
-        return _analyzeProfitabilityFinancial(series, details, risks, opps)
+        return _analyzeProfitabilityFinancial(aSeries, details, risks, opps)
 
     om = ratios.operatingMargin
     nm = ratios.netMargin
@@ -230,13 +233,22 @@ def analyzeProfitability(
             details.append(f"낮은 레버리지로 고ROE — 진성 수익성")
             opps.append(Flag("strong", "finance", f"레버리지 {leverage:.1f}x로 ROE {roe:.1f}%"))
 
+    bm = getBenchmark(sector)
+    omAdj = sectorAdjustment(om, bm.omMedian, bm.omQ1, bm.omQ3)
+    roeAdj = sectorAdjustment(roe, bm.roeMedian, bm.roeQ1, bm.roeQ3)
+    adj = omAdj + roeAdj
+    if adj != 0:
+        score += adj
+        direction = "상향" if adj > 0 else "하향"
+        details.append(f"[섹터 보정 {direction}: {sector.value} 대비 OM{'↑' if omAdj > 0 else '↓' if omAdj < 0 else '→'} ROE{'↑' if roeAdj > 0 else '↓' if roeAdj < 0 else '→'}]")
+
     grade = _scoreToGrade(score, 5)
     summary = "수익성 " + ("우수" if score >= 4 else "양호" if score >= 2 else "보통" if score >= 0 else "개선 필요")
     return InsightResult(grade, summary, details, risks, opps)
 
 
 def _analyzeProfitabilityFinancial(
-    series: dict,
+    aSeries: dict,
     details: list[str],
     risks: list[Flag],
     opps: list[Flag],
@@ -244,11 +256,11 @@ def _analyzeProfitabilityFinancial(
     """금융업 전용 수익성 분석 (ROE/ROA/CIR)."""
     details.append("[금융업 수익성 기준 적용]")
     score = 0
-    netIncome = getLatest(series, "IS", "net_income")
-    totalAssets = getLatest(series, "BS", "total_assets")
-    totalEquity = getLatest(series, "BS", "total_equity") or getLatest(series, "BS", "equity_including_nci")
-    opIncome = getLatest(series, "IS", "operating_income")
-    opExpense = getLatest(series, "IS", "operating_expense")
+    netIncome = getLatest(aSeries, "IS", "net_income")
+    totalAssets = getLatest(aSeries, "BS", "total_assets")
+    totalEquity = getLatest(aSeries, "BS", "total_equity") or getLatest(aSeries, "BS", "equity_including_nci")
+    opIncome = getLatest(aSeries, "IS", "operating_income")
+    opExpense = getLatest(aSeries, "IS", "operating_expense")
 
     roe = (netIncome / totalEquity) * 100 if netIncome and totalEquity and totalEquity > 0 else None
     roa = (netIncome / totalAssets) * 100 if netIncome and totalAssets and totalAssets > 0 else None
@@ -366,12 +378,12 @@ def analyzeHealth(ratios: RatioResult, isFinancial: bool = False) -> InsightResu
 
 def analyzeCashflow(
     ratios: RatioResult,
-    series: dict,
+    aSeries: dict,
     isFinancial: bool = False,
 ) -> InsightResult:
     """현금흐름 분석."""
     if isFinancial:
-        return _analyzeCashflowFinancial(series)
+        return _analyzeCashflowFinancial(aSeries)
 
     details: list[str] = []
     risks: list[Flag] = []
@@ -416,7 +428,7 @@ def analyzeCashflow(
             risks.append(Flag("warning", "finance", "FCF + 영업CF 부진"))
             score -= 1
 
-    cfVals = getAnnualValues(series, "CF", "operating_cashflow")
+    cfVals = getAnnualValues(aSeries, "CF", "operating_cashflow")
     validCf = [v for v in cfVals if v is not None]
     if len(validCf) >= 2:
         improving = validCf[-1] > validCf[-2]
@@ -431,16 +443,16 @@ def analyzeCashflow(
     return InsightResult(grade, summary, details, risks, opps)
 
 
-def _analyzeCashflowFinancial(series: dict) -> InsightResult:
+def _analyzeCashflowFinancial(aSeries: dict) -> InsightResult:
     """금융업 전용 현금흐름 분석."""
     details: list[str] = ["[금융업 현금흐름]"]
     risks: list[Flag] = []
     opps: list[Flag] = []
     score = 0
 
-    opCF = getLatest(series, "CF", "operating_cashflow")
-    dividendsPaid = getLatest(series, "CF", "dividends_paid")
-    netIncome = getLatest(series, "IS", "net_income")
+    opCF = getLatest(aSeries, "CF", "operating_cashflow")
+    dividendsPaid = getLatest(aSeries, "CF", "dividends_paid")
+    netIncome = getLatest(aSeries, "IS", "net_income")
 
     if opCF is not None:
         details.append(f"영업CF: {opCF / 1e8:,.0f}억")

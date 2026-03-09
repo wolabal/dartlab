@@ -8,6 +8,7 @@ from dartlab.engines.financeEngine.pivot import buildTimeseries, buildAnnual
 from dartlab.engines.financeEngine.ratios import calcRatios
 from dartlab.engines.insightEngine.anomaly import runAnomalyDetection
 from dartlab.engines.insightEngine.detector import detectFinancialSector
+from dartlab.engines.sectorEngine.types import Sector
 from dartlab.engines.insightEngine.grading import (
     analyzeCashflow,
     analyzeGovernance,
@@ -48,10 +49,12 @@ def analyze(stockCode: str, company: Company | None = None) -> AnalysisResult | 
         company = dartlab.Company(stockCode)
 
     isFinancial, _ = detectFinancialSector(aSeries, ratios)
+    sectorInfo = company.sector
+    sector = sectorInfo.sector if sectorInfo else Sector.UNKNOWN
 
     insights = {}
     insights["performance"] = analyzePerformance(aSeries, aYears, qSeries, qPeriods, isFinancial)
-    insights["profitability"] = analyzeProfitability(ratios, aSeries, isFinancial)
+    insights["profitability"] = analyzeProfitability(ratios, aSeries, isFinancial, sector=sector)
     insights["health"] = analyzeHealth(ratios, isFinancial)
     insights["cashflow"] = analyzeCashflow(ratios, aSeries, isFinancial)
     insights["governance"] = analyzeGovernance(company)

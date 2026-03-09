@@ -14,6 +14,12 @@
 """
 
 from dartlab.engines.insightEngine.pipeline import analyze
+from dartlab.engines.insightEngine.rank import (
+    RankInfo,
+    buildSnapshot,
+    getRank,
+    getRankOrBuild,
+)
 from dartlab.engines.insightEngine.types import (
     AnalysisResult,
     Anomaly,
@@ -23,8 +29,12 @@ from dartlab.engines.insightEngine.types import (
 
 __all__ = [
     "analyze",
+    "buildSnapshot",
+    "getRank",
+    "getRankOrBuild",
     "AnalysisResult",
     "Anomaly",
     "Flag",
     "InsightResult",
+    "RankInfo",
 ]

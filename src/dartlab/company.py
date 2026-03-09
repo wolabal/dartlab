@@ -763,6 +763,85 @@ class Company:
         """
         return self._getFinanceBuild("cum", "CFS")
 
+    # ── 섹터 분류 ──
+
+    @property
+    def sector(self):
+        """WICS 투자 섹터 분류 (KIND 업종 + 키워드 기반).
+
+        Returns:
+            SectorInfo (sector, industryGroup, confidence, source).
+
+        Example::
+
+            c = Company("005930")
+            c.sector              # SectorInfo(IT/반도체와반도체장비, conf=1.00, src=override)
+            c.sector.sector       # Sector.IT
+            c.sector.industryGroup  # IndustryGroup.SEMICONDUCTOR
+        """
+        cacheKey = "_sector"
+        if cacheKey in self._cache:
+            return self._cache[cacheKey]
+        from dartlab.engines.sectorEngine import classify
+        kindDf = getKindList()
+        row = kindDf.filter(pl.col("종목코드") == self.stockCode)
+        kindIndustry = row["업종"][0] if row.height > 0 and "업종" in kindDf.columns else None
+        mainProducts = row["주요제품"][0] if row.height > 0 and "주요제품" in kindDf.columns else None
+        result = classify(self.corpName or "", kindIndustry, mainProducts)
+        self._cache[cacheKey] = result
+        return result
+
+    @property
+    def sectorParams(self):
+        """현재 종목의 섹터별 밸류에이션 파라미터.
+
+        Returns:
+            SectorParams (discountRate, growthRate, perMultiple, ...).
+
+        Example::
+
+            c = Company("005930")
+            c.sectorParams.perMultiple   # 15
+            c.sectorParams.discountRate  # 13.0
+        """
+        cacheKey = "_sectorParams"
+        if cacheKey in self._cache:
+            return self._cache[cacheKey]
+        from dartlab.engines.sectorEngine import getParams
+        result = getParams(self.sector)
+        self._cache[cacheKey] = result
+        return result
+
+    # ── 규모 랭크 ──
+
+    @property
+    def rank(self):
+        """전체 시장 + 섹터 내 규모 순위 (매출/자산/성장률).
+
+        스냅샷이 없으면 None 반환. buildSnapshot()으로 사전 빌드 필요.
+
+        Returns:
+            RankInfo 또는 스냅샷 미빌드 시 None.
+
+        Example::
+
+            from dartlab.engines.insightEngine import buildSnapshot
+            buildSnapshot()
+
+            c = Company("005930")
+            c.rank                    # RankInfo(삼성전자, 매출 2/2192, 섹터 2/467, large)
+            c.rank.revenueRank        # 2
+            c.rank.revenueRankInSector # 2
+            c.rank.sizeClass          # "large"
+        """
+        cacheKey = "_rank"
+        if cacheKey in self._cache:
+            return self._cache[cacheKey]
+        from dartlab.engines.insightEngine.rank import getRank
+        result = getRank(self.stockCode)
+        self._cache[cacheKey] = result
+        return result
+
     # ── 인사이트 분석 ──
 
     @property

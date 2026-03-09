@@ -21,7 +21,7 @@ def detectIncompleteYear(qPeriods: list[str]) -> tuple[str, int]:
 
 
 def detectFinancialSector(
-    series: dict,
+    aSeries: dict,
     ratios: RatioResult,
 ) -> tuple[bool, list[str]]:
     """금융업 자동 감지 (신호 2개 이상이면 금융업).
@@ -36,8 +36,8 @@ def detectFinancialSector(
     """
     signals: list[str] = []
 
-    revVals = getAnnualValues(series, "IS", "revenue")
-    opVals = getAnnualValues(series, "IS", "operating_income")
+    revVals = getAnnualValues(aSeries, "IS", "revenue")
+    opVals = getAnnualValues(aSeries, "IS", "operating_income")
     hasRevenue = any(v is not None for v in revVals)
     hasOpIncome = any(v is not None for v in opVals)
     if not hasRevenue and hasOpIncome:
@@ -46,16 +46,16 @@ def detectFinancialSector(
     if ratios.debtRatio is not None and ratios.debtRatio > 500:
         signals.append(f"부채비율 {ratios.debtRatio:.0f}%")
 
-    if ratios.currentRatio is None and getLatest(series, "BS", "current_assets") is None:
+    if ratios.currentRatio is None and getLatest(aSeries, "BS", "current_assets") is None:
         signals.append("유동자산/유동부채 데이터 없음")
 
-    if getLatest(series, "IS", "interest_income") is not None:
+    if getLatest(aSeries, "IS", "interest_income") is not None:
         signals.append("이자수익 계정 존재")
 
-    if getLatest(series, "IS", "net_interest_income") is not None:
+    if getLatest(aSeries, "IS", "net_interest_income") is not None:
         signals.append("순이자수익 계정 존재")
 
-    if getLatest(series, "IS", "insurance_revenue") is not None:
+    if getLatest(aSeries, "IS", "insurance_revenue") is not None:
         signals.append("보험수익 계정 존재")
 
     return len(signals) >= 2, signals
