@@ -23,7 +23,7 @@ class CodexProvider(BaseProvider):
 
 	@property
 	def default_model(self) -> str:
-		return "gpt-5.4"
+		return "gpt-4.1"
 
 	def check_available(self) -> bool:
 		if not shutil.which("codex"):
@@ -73,15 +73,12 @@ class CodexProvider(BaseProvider):
 		return "\n\n".join(parts)
 
 	def _build_cmd(self) -> list[str]:
-		cmd = [
+		return [
 			"codex", "exec", "-",
 			"--json",
 			"--sandbox", "read-only",
 			"--skip-git-repo-check",
 		]
-		if self.config.model:
-			cmd.extend(["-m", self.resolved_model])
-		return cmd
 
 	def _parse_jsonl(self, output: str) -> tuple[str, dict | None]:
 		"""JSONL 출력에서 답변과 usage를 추출."""
@@ -168,6 +165,7 @@ class CodexProvider(BaseProvider):
 		proc.stdin.write(prompt.encode("utf-8"))  # type: ignore[union-attr]
 		proc.stdin.close()  # type: ignore[union-attr]
 
+		full_text = ""
 		try:
 			for raw_line in proc.stdout:  # type: ignore[union-attr]
 				line = raw_line.decode("utf-8", errors="replace").strip()
@@ -178,9 +176,7 @@ class CodexProvider(BaseProvider):
 					if event.get("type") == "item.completed":
 						item = event.get("item", {})
 						if item.get("type") == "agent_message":
-							text = item.get("text", "")
-							if text:
-								yield text
+							full_text = item.get("text", "")
 				except json.JSONDecodeError:
 					continue
 		finally:
@@ -189,3 +185,27 @@ class CodexProvider(BaseProvider):
 				proc.wait(timeout=5)
 			except subprocess.TimeoutExpired:
 				proc.kill()
+
+		if full_text:
+			yield from _simulate_stream(full_text)
+
+
+def _simulate_stream(text: str) -> Generator[str, None, None]:
+	"""전체 텍스트를 문장 단위로 잘라 yield — 타이핑 효과."""
+	import re
+	chunks = re.split(r"(?<=\n)", text)
+	for chunk in chunks:
+		if not chunk:
+			continue
+		if len(chunk) > 200:
+			words = chunk.split(" ")
+			buf = ""
+			for w in words:
+				buf += w + " "
+				if len(buf) >= 40:
+					yield buf
+					buf = ""
+			if buf:
+				yield buf
+		else:
+			yield chunk

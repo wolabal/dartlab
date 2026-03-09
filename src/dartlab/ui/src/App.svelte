@@ -1,6 +1,6 @@
 <script>
 	import "./app.css";
-	import { fetchStatus, configure, askStream, fetchModels, pullOllamaModel } from "$lib/api.js";
+	import { fetchStatus, configure, askStream, fetchModels, pullOllamaModel, oauthAuthorize, oauthStatus, oauthLogout } from "$lib/api.js";
 	import { cn } from "$lib/utils.js";
 	import { createConversationsStore } from "$lib/stores/conversations.svelte.js";
 	import Sidebar from "$lib/components/Sidebar.svelte";
@@ -9,7 +9,7 @@
 	import {
 		Menu, PanelLeftClose, Coffee, Github, FileText,
 		Download, X, Loader2, Settings, Check, ExternalLink,
-		Key, AlertCircle, CheckCircle2, Terminal
+		Key, AlertCircle, CheckCircle2, Terminal, LogIn, LogOut
 	} from "lucide-svelte";
 
 	// ── State ──
@@ -26,6 +26,7 @@
 
 	// Initial loading
 	let statusLoading = $state(true);
+	let appVersion = $state("");
 
 	// Settings modal
 	let showSettings = $state(false);
@@ -46,6 +47,10 @@
 	let pullProgress = $state("");
 	let pullPercent = $state(0);
 	let pullHandle = $state(null);
+
+	// OAuth login
+	let oauthLoggingIn = $state(false);
+	let chatgptDetail = $state({});
 
 	// Delete confirmation
 	let deleteConfirmId = $state(null);
@@ -68,17 +73,23 @@
 	// ── Provider/Model logic ──
 	$effect(() => { loadStatus(); });
 
+	let codexDetail = $state({});
+	let claudeCodeDetail = $state({});
+
 	async function loadStatus() {
 		statusLoading = true;
 		try {
 			const data = await fetchStatus();
 			providers = data.providers || {};
 			ollamaDetail = data.ollama || {};
+			codexDetail = data.codex || {};
+			claudeCodeDetail = data.claudeCode || {};
+			chatgptDetail = data.chatgpt || {};
+			if (data.version) appVersion = data.version;
 
 			const savedProvider = localStorage.getItem("dartlab-provider");
 			const savedModel = localStorage.getItem("dartlab-model");
 
-			// 1) 저장된 provider가 available이면 복원
 			if (savedProvider && providers[savedProvider]?.available) {
 				activeProvider = savedProvider;
 				expandedProvider = savedProvider;
@@ -96,8 +107,6 @@
 				return;
 			}
 
-			// 2) 저장된 provider가 있지만 available이 아닐 때 (API 키 필요 등)
-			//    → provider 선택은 유지하되 모델 목록은 로드
 			if (savedProvider && providers[savedProvider]) {
 				activeProvider = savedProvider;
 				expandedProvider = savedProvider;
@@ -113,8 +122,7 @@
 				return;
 			}
 
-			// 3) 저장된 게 없으면 자동 탐지
-			for (const name of ["ollama"]) {
+			for (const name of ["chatgpt", "codex", "ollama"]) {
 				if (providers[name]?.available) {
 					activeProvider = name;
 					expandedProvider = name;
@@ -201,6 +209,62 @@
 			apiKeyResult = "error";
 		}
 		apiKeyVerifying = false;
+	}
+
+	async function startOAuthLogin() {
+		if (oauthLoggingIn) return;
+		oauthLoggingIn = true;
+		try {
+			const { authUrl } = await oauthAuthorize();
+			window.open(authUrl, "dartlab-oauth", "width=600,height=700");
+
+			const pollInterval = setInterval(async () => {
+				try {
+					const result = await oauthStatus();
+					if (result.done) {
+						clearInterval(pollInterval);
+						oauthLoggingIn = false;
+						if (result.error) {
+							showToast(`인증 실패: ${result.error}`);
+						} else {
+							showToast("ChatGPT 인증 성공", "success");
+							await loadStatus();
+							if (providers["chatgpt"]?.available) {
+								await selectProvider("chatgpt");
+							}
+						}
+					}
+				} catch {
+					clearInterval(pollInterval);
+					oauthLoggingIn = false;
+				}
+			}, 2000);
+
+			setTimeout(() => {
+				clearInterval(pollInterval);
+				if (oauthLoggingIn) {
+					oauthLoggingIn = false;
+					showToast("인증 시간이 초과되었습니다. 다시 시도해주세요.");
+				}
+			}, 120000);
+		} catch (err) {
+			oauthLoggingIn = false;
+			showToast(`OAuth 시작 실패: ${err.message}`);
+		}
+	}
+
+	async function handleOAuthLogout() {
+		try {
+			await oauthLogout();
+			chatgptDetail = { authenticated: false };
+			if (activeProvider === "chatgpt") {
+				providers = { ...providers, chatgpt: { ...providers.chatgpt, available: false } };
+			}
+			showToast("ChatGPT 로그아웃 완료", "success");
+			await loadStatus();
+		} catch {
+			showToast("로그아웃 실패");
+		}
 	}
 
 	function startPullModel() {
@@ -330,7 +394,12 @@
 			{
 				onMeta(meta) {
 					const updates = { meta };
-					if (meta.company) updates.company = meta.company;
+					if (meta.company) {
+						updates.company = meta.company;
+						if (store.activeId && store.active?.title === "새 대화") {
+							store.updateTitle(store.activeId, meta.company);
+						}
+					}
 					store.updateLastMessage(updates);
 				},
 				onSnapshot(snapshot) {
@@ -444,6 +513,7 @@
 		conversations={store.conversations}
 		activeId={store.activeId}
 		open={sidebarOpen}
+		version={appVersion}
 		onNewChat={handleNewChat}
 		onSelect={handleSelectConversation}
 		onDelete={handleDeleteConversation}
@@ -743,20 +813,116 @@
 								<!-- CLI provider 설치 안내 -->
 								{#if needsCli && !info.available}
 									<div class="px-4 pb-4 border-t border-dl-border/50 pt-3">
-										<div class="text-[12px] text-dl-text mb-2">
-											{name === "claude-code" ? "Claude Code CLI가 설치되어 있지 않습니다" : "Codex CLI가 설치되어 있지 않습니다"}
+										{#if name === "codex"}
+											<div class="text-[12px] text-dl-text mb-2.5">
+												{codexDetail.installed ? "Codex CLI가 설치되었지만 인증이 필요합니다" : "Codex CLI 설치가 필요합니다"}
+											</div>
+											<div class="space-y-2">
+												{#if !codexDetail.installed}
+													<div class="flex items-start gap-2.5">
+														<span class="text-[10px] text-dl-text-dim mt-0.5 flex-shrink-0">1.</span>
+														<div class="flex-1">
+															<div class="text-[10px] text-dl-text-dim mb-1">Node.js 설치 후 실행</div>
+															<div class="p-2 rounded-lg bg-dl-bg-darker border border-dl-border text-[11px] text-dl-text-muted font-mono">
+																npm install -g @openai/codex
+															</div>
+														</div>
+													</div>
+												{/if}
+												<div class="flex items-start gap-2.5">
+													<span class="text-[10px] text-dl-text-dim mt-0.5 flex-shrink-0">{codexDetail.installed ? "1." : "2."}</span>
+													<div class="flex-1">
+														<div class="text-[10px] text-dl-text-dim mb-1">브라우저 인증 (ChatGPT 계정)</div>
+														<div class="p-2 rounded-lg bg-dl-bg-darker border border-dl-border text-[11px] text-dl-text-muted font-mono">
+															codex
+														</div>
+													</div>
+												</div>
+											</div>
+											<div class="flex items-center gap-1.5 mt-2.5 px-2.5 py-2 rounded-lg bg-amber-500/5 border border-amber-500/20">
+												<AlertCircle size={12} class="text-amber-400 flex-shrink-0" />
+												<span class="text-[10px] text-amber-400/80">ChatGPT Plus 또는 Pro 구독이 필요합니다</span>
+											</div>
+										{:else if name === "claude-code"}
+											<div class="text-[12px] text-dl-text mb-2.5">
+												{claudeCodeDetail.installed && !claudeCodeDetail.authenticated ? "Claude Code가 설치되었지만 인증이 필요합니다" : "Claude Code CLI 설치가 필요합니다"}
+											</div>
+											<div class="space-y-2">
+												{#if !claudeCodeDetail.installed}
+													<div class="flex items-start gap-2.5">
+														<span class="text-[10px] text-dl-text-dim mt-0.5 flex-shrink-0">1.</span>
+														<div class="flex-1">
+															<div class="text-[10px] text-dl-text-dim mb-1">Node.js 설치 후 실행</div>
+															<div class="p-2 rounded-lg bg-dl-bg-darker border border-dl-border text-[11px] text-dl-text-muted font-mono">
+																npm install -g @anthropic-ai/claude-code
+															</div>
+														</div>
+													</div>
+												{/if}
+												<div class="flex items-start gap-2.5">
+													<span class="text-[10px] text-dl-text-dim mt-0.5 flex-shrink-0">{claudeCodeDetail.installed ? "1." : "2."}</span>
+													<div class="flex-1">
+														<div class="text-[10px] text-dl-text-dim mb-1">인증</div>
+														<div class="p-2 rounded-lg bg-dl-bg-darker border border-dl-border text-[11px] text-dl-text-muted font-mono">
+															claude auth login
+														</div>
+													</div>
+												</div>
+											</div>
+											<div class="flex items-center gap-1.5 mt-2.5 px-2.5 py-2 rounded-lg bg-amber-500/5 border border-amber-500/20">
+												<AlertCircle size={12} class="text-amber-400 flex-shrink-0" />
+												<span class="text-[10px] text-amber-400/80">Claude Pro 또는 Max 구독이 필요합니다</span>
+											</div>
+										{/if}
+										<div class="text-[10px] text-dl-text-dim mt-2">설치 완료 후 새로고침하세요</div>
+									</div>
+								{/if}
+
+								<!-- OAuth 로그인 (chatgpt provider) -->
+								{#if info.auth === "oauth" && !info.available}
+									<div class="px-4 pb-4 border-t border-dl-border/50 pt-3">
+										<div class="text-[12px] text-dl-text mb-2.5">ChatGPT 계정으로 로그인하여 사용하세요</div>
+										<button
+											class="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-lg bg-dl-primary/20 text-dl-primary-light text-[12px] font-medium hover:bg-dl-primary/30 transition-colors disabled:opacity-40"
+											onclick={startOAuthLogin}
+											disabled={oauthLoggingIn}
+										>
+											{#if oauthLoggingIn}
+												<Loader2 size={14} class="animate-spin" />
+												브라우저에서 로그인 중...
+											{:else}
+												<LogIn size={14} />
+												OpenAI 계정으로 로그인
+											{/if}
+										</button>
+										<div class="flex items-center gap-1.5 mt-2.5 px-2.5 py-2 rounded-lg bg-amber-500/5 border border-amber-500/20">
+											<AlertCircle size={12} class="text-amber-400 flex-shrink-0" />
+											<span class="text-[10px] text-amber-400/80">ChatGPT Plus 또는 Pro 구독이 필요합니다</span>
 										</div>
-										<div class="p-2.5 rounded-lg bg-dl-bg-darker border border-dl-border text-[11px] text-dl-text-muted font-mono">
-											{name === "claude-code" ? "npm install -g @anthropic-ai/claude-code" : "npm install -g @openai/codex"}
-										</div>
-										<div class="text-[10px] text-dl-text-dim mt-2">
-											{name === "claude-code" ? "설치 후 `claude auth login`으로 인증하세요" : "설치 후 브라우저 인증이 필요합니다"}
+									</div>
+								{/if}
+
+								<!-- OAuth 인증됨 + 로그아웃 (chatgpt provider) -->
+								{#if info.auth === "oauth" && info.available}
+									<div class="px-4 pb-2 border-t border-dl-border/50 pt-2.5">
+										<div class="flex items-center justify-between">
+											<div class="flex items-center gap-2">
+												<CheckCircle2 size={13} class="text-dl-success" />
+												<span class="text-[11px] text-dl-success">ChatGPT 인증됨</span>
+											</div>
+											<button
+												class="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] text-dl-text-dim hover:text-dl-primary-light hover:bg-white/5 transition-colors"
+												onclick={handleOAuthLogout}
+											>
+												<LogOut size={11} />
+												로그아웃
+											</button>
 										</div>
 									</div>
 								{/if}
 
 								<!-- ═══ Inline Model Selection ═══ -->
-								{#if info.available || needsKey}
+								{#if info.available || needsKey || needsCli || info.auth === "oauth"}
 									<div class="px-4 pb-4 border-t border-dl-border/50 pt-3">
 										<div class="flex items-center justify-between mb-2.5">
 											<span class="text-[11px] font-medium text-dl-text-muted">모델 선택</span>

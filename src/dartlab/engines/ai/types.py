@@ -6,7 +6,7 @@ import dataclasses
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
-ProviderName = Literal["claude", "openai", "ollama", "custom", "claude-code", "codex"]
+ProviderName = Literal["claude", "openai", "ollama", "custom", "claude-code", "codex", "chatgpt"]
 
 
 @dataclass

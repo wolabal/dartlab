@@ -52,6 +52,8 @@ SNAKE_ALIASES: dict[str, str] = {
     "cash_flows_from_operating_activities": "operating_cashflow",
     "cash_flows_from_investing_activities": "investing_cashflow",
     "cash_flows_from_financing_activities": "financing_cashflow",
+    "trade_and_other_receivables": "trade_receivables",
+    "trade_and_other_current_receivables": "trade_receivables",
 }
 
 

@@ -168,7 +168,7 @@ class TestCodexProvider:
 
 	def test_default_model(self):
 		provider = self._make_provider()
-		assert provider.default_model == "o4-mini"
+		assert provider.default_model == "gpt-4.1"
 
 	def test_resolved_model_override(self):
 		provider = self._make_provider(model="gpt-4o")

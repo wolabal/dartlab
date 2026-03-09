@@ -9,22 +9,80 @@
 
 	let loadingPhase = $derived.by(() => {
 		if (!message.loading) return "";
-		if (message.text) return "응답 생성 중...";
-		if (message.contexts?.length > 0) return "분석 중...";
-		if (message.snapshot) return "데이터 확인 중...";
-		if (message.meta) return "기업 데이터 로딩 중...";
-		return "생각 중...";
+		if (message.text) return "응답 작성 중";
+		if (message.toolEvents?.length > 0) return "도구 실행 중";
+		if (message.contexts?.length > 0) {
+			const last = message.contexts[message.contexts.length - 1];
+			return `데이터 분석 중 — ${last?.label || last?.module || ""}`;
+		}
+		if (message.snapshot) return "핵심 수치 확인 완료, 데이터 검색 중";
+		if (message.meta?.company) return `${message.meta.company} 데이터 검색 중`;
+		if (message.meta?.includedModules) return "분석 모듈 선택 완료";
+		return "생각 중";
 	});
 
-	let latestContextLabel = $derived.by(() => {
-		if (!message.loading || !message.contexts?.length) return "";
-		const last = message.contexts[message.contexts.length - 1];
-		return last?.label || last?.module || "";
-	});
+	function isNumericCell(text) {
+		const s = text.replace(/<\/?strong>/g, '').replace(/\*\*/g, '').trim();
+		return /^[−\-+]?[\d,]+\.?\d*[%조억만원배x]*$/.test(s) || s === '-' || s === '0';
+	}
 
 	function renderMarkdown(text) {
 		if (!text) return "";
-		let html = text
+
+		let tableBlocks = [];
+		let processed = text.replace(/((?:^\|.+\|$\n?)+)/gm, (block) => {
+			const lines = block.trim().split('\n').filter(l => l.trim());
+			let headerLine = null;
+			let sepIdx = -1;
+			let dataLines = [];
+
+			for (let i = 0; i < lines.length; i++) {
+				const cells = lines[i].slice(1, -1).split('|').map(c => c.trim());
+				if (cells.every(c => /^[\-:]+$/.test(c))) {
+					sepIdx = i;
+					break;
+				}
+			}
+
+			if (sepIdx > 0) {
+				headerLine = lines[sepIdx - 1];
+				dataLines = lines.slice(sepIdx + 1);
+			} else if (sepIdx === 0) {
+				dataLines = lines.slice(1);
+			} else {
+				headerLine = lines[0];
+				dataLines = lines.slice(1);
+			}
+
+			let tableHtml = '<table>';
+			if (headerLine) {
+				const hCells = headerLine.slice(1, -1).split('|').map(c => c.trim());
+				tableHtml += '<thead><tr>' + hCells.map(c => {
+					let rendered = c.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+					return `<th>${rendered}</th>`;
+				}).join('') + '</tr></thead>';
+			}
+
+			if (dataLines.length > 0) {
+				tableHtml += '<tbody>';
+				for (const line of dataLines) {
+					const cells = line.slice(1, -1).split('|').map(c => c.trim());
+					tableHtml += '<tr>' + cells.map(c => {
+						let rendered = c.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+						const align = isNumericCell(c) ? ' class="num"' : '';
+						return `<td${align}>${rendered}</td>`;
+					}).join('') + '</tr>';
+				}
+				tableHtml += '</tbody>';
+			}
+			tableHtml += '</table>';
+
+			let idx = tableBlocks.length;
+			tableBlocks.push(tableHtml);
+			return `\n%%TABLE_${idx}%%\n`;
+		});
+
+		let html = processed
 			.replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>')
 			.replace(/`([^`]+)`/g, '<code>$1</code>')
 			.replace(/^### (.+)$/gm, '<h3>$1</h3>')
@@ -34,16 +92,15 @@
 			.replace(/\*([^*]+)\*/g, '<em>$1</em>')
 			.replace(/^[•\-\*] (.+)$/gm, '<li>$1</li>')
 			.replace(/^\d+\. (.+)$/gm, '<li>$1</li>')
-			.replace(/^\|(.+)\|$/gm, (match) => {
-				const cells = match.slice(1, -1).split('|').map(c => c.trim());
-				if (cells.every(c => /^[\-:]+$/.test(c))) return '';
-				return '<tr>' + cells.map(c => `<td>${c}</td>`).join('') + '</tr>';
-			})
 			.replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>')
 			.replace(/\n\n/g, '</p><p>')
 			.replace(/\n/g, '<br>');
 		html = html.replace(/(<li>.*?<\/li>(\s*<br>)?)+/g, m => '<ul>' + m.replace(/<br>/g, '') + '</ul>');
-		html = html.replace(/(<tr>.*?<\/tr>(\s*<br>)?)+/g, m => '<table>' + m.replace(/<br>/g, '') + '</table>');
+
+		for (let i = 0; i < tableBlocks.length; i++) {
+			html = html.replace(`%%TABLE_${i}%%`, tableBlocks[i]);
+		}
+
 		return '<p>' + html + '</p>';
 	}
 
@@ -136,14 +193,17 @@
 			{/if}
 
 			{#if message.loading && !message.text}
-				<div class="flex items-center gap-2 h-6 text-[12px] text-dl-text-dim">
+				<div class="flex items-center gap-2 h-6 text-[12px] text-dl-text-dim animate-fadeIn">
 					<Loader2 size={14} class="animate-spin flex-shrink-0" />
 					<span>{loadingPhase}</span>
-					{#if latestContextLabel}
-						<span class="text-dl-text-muted">— {latestContextLabel}</span>
-					{/if}
 				</div>
 			{:else}
+				{#if message.loading}
+					<div class="flex items-center gap-2 mb-2 text-[11px] text-dl-text-dim">
+						<Loader2 size={12} class="animate-spin flex-shrink-0" />
+						<span>{loadingPhase}</span>
+					</div>
+				{/if}
 				<div class={cn("prose-dartlab text-[15px] leading-[1.75]", message.error && "text-dl-primary")}>
 					{@html renderMarkdown(message.text)}
 				</div>

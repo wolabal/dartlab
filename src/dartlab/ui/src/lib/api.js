@@ -73,6 +73,27 @@ export function pullOllamaModel(modelName, { onProgress, onDone, onError }) {
 	return { abort: () => controller.abort() };
 }
 
+/** ChatGPT OAuth 인증 시작 */
+export async function oauthAuthorize() {
+	const res = await fetch(`${BASE}/api/oauth/authorize`);
+	if (!res.ok) throw new Error("OAuth 인증 시작 실패");
+	return res.json();
+}
+
+/** OAuth 인증 완료 여부 폴링 */
+export async function oauthStatus() {
+	const res = await fetch(`${BASE}/api/oauth/status`);
+	if (!res.ok) return { done: false };
+	return res.json();
+}
+
+/** OAuth 로그아웃 */
+export async function oauthLogout() {
+	const res = await fetch(`${BASE}/api/oauth/logout`, { method: "POST" });
+	if (!res.ok) throw new Error("로그아웃 실패");
+	return res.json();
+}
+
 /** 종목 검색 */
 export async function searchCompany(query) {
 	const res = await fetch(`${BASE}/api/search?q=${encodeURIComponent(query)}`);
@@ -140,6 +161,7 @@ export function askStream(company, question, options = {}, { onMeta, onSnapshot,
 			const decoder = new TextDecoder();
 			let buffer = "";
 			let doneFired = false;
+			let currentEvent = null;
 
 			while (true) {
 				const { done, value } = await reader.read();
@@ -151,7 +173,7 @@ export function askStream(company, question, options = {}, { onMeta, onSnapshot,
 
 				for (const line of lines) {
 					if (line.startsWith("event:")) {
-						var currentEvent = line.slice(6).trim();
+						currentEvent = line.slice(6).trim();
 					} else if (line.startsWith("data:") && currentEvent) {
 						const data = line.slice(5).trim();
 						try {

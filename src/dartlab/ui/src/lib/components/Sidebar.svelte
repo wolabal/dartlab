@@ -7,6 +7,7 @@
 		conversations = [],
 		activeId = null,
 		open = true,
+		version = "",
 		onNewChat,
 		onSelect,
 		onDelete,
@@ -114,6 +115,12 @@
 					</div>
 				{/each}
 			</div>
+
+			{#if version}
+				<div class="flex-shrink-0 px-4 py-2.5 border-t border-dl-border/50 text-[10px] text-dl-text-dim">
+					DartLab v{version}
+				</div>
+			{/if}
 		</div>
 	{:else}
 		<!-- Collapsed: icon-only -->
