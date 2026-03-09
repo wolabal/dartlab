@@ -5,6 +5,7 @@ import sys
 from dartlab import config, core, engines
 from dartlab.company import Company
 from dartlab.core.kindList import codeToName, getKindList, nameToCode, searchName
+from dartlab.engines import llmAnalyzer as llm
 
 
 class _Module(sys.modules[__name__].__class__):
@@ -26,6 +27,7 @@ __all__ = [
     "config",
     "core",
     "engines",
+    "llm",
     "Company",
     "verbose",
     "getKindList",

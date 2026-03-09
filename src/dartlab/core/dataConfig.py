@@ -9,6 +9,13 @@ finance는 GitHub Release 1000에셋 제한 때문에 종목코드 범위별 다
 REPO = "eddmpython/dartlab"
 REPO_URL = f"https://github.com/{REPO}"
 
+_SHARD_RANGES = [
+    {"min": 0, "max": 49999},
+    {"min": 50000, "max": 99999},
+    {"min": 100000, "max": 199999},
+    {"min": 200000, "max": 999999},
+]
+
 DATA_RELEASES: dict[str, dict] = {
     "docs": {
         "tag": "data-docs",
@@ -19,36 +26,57 @@ DATA_RELEASES: dict[str, dict] = {
         "dir": "financeData",
         "label": "재무 숫자 데이터",
         "shards": [
-            {"tag": "data-finance-1", "min": 0, "max": 49999},
-            {"tag": "data-finance-2", "min": 50000, "max": 99999},
-            {"tag": "data-finance-3", "min": 100000, "max": 199999},
-            {"tag": "data-finance-4", "min": 200000, "max": 999999},
+            {"tag": f"data-finance-{i+1}", **r}
+            for i, r in enumerate(_SHARD_RANGES)
+        ],
+    },
+    "report": {
+        "dir": "reportData",
+        "label": "정기보고서 데이터",
+        "shards": [
+            {"tag": f"data-report-{i+1}", **r}
+            for i, r in enumerate(_SHARD_RANGES)
         ],
     },
 }
 
 
-def financeTag(stockCode: str) -> str:
-    """종목코드 → 해당 finance shard 태그."""
-    code = int(stockCode)
-    for shard in DATA_RELEASES["finance"]["shards"]:
+def shardTag(stockCode: str, category: str = "finance") -> str:
+    """종목코드 → 해당 카테고리의 shard 태그."""
+    shards = DATA_RELEASES[category]["shards"]
+    try:
+        code = int(stockCode)
+    except ValueError:
+        return shards[-1]["tag"]
+    for shard in shards:
         if shard["min"] <= code <= shard["max"]:
             return shard["tag"]
-    return DATA_RELEASES["finance"]["shards"][-1]["tag"]
+    return shards[-1]["tag"]
+
+
+def financeTag(stockCode: str) -> str:
+    """종목코드 → 해당 finance shard 태그 (하위 호환)."""
+    return shardTag(stockCode, "finance")
+
+
+def shardAllTags(category: str) -> list[str]:
+    """카테고리의 전체 shard 태그 목록."""
+    return [s["tag"] for s in DATA_RELEASES[category]["shards"]]
 
 
 def financeAllTags() -> list[str]:
-    """finance 전체 shard 태그 목록."""
-    return [s["tag"] for s in DATA_RELEASES["finance"]["shards"]]
+    """finance 전체 shard 태그 목록 (하위 호환)."""
+    return shardAllTags("finance")
 
 
 def releaseBaseUrl(category: str = "docs", stockCode: str | None = None) -> str:
-    if category == "finance" and stockCode:
-        tag = financeTag(stockCode)
-    elif category == "finance":
-        tag = DATA_RELEASES["finance"]["shards"][0]["tag"]
+    conf = DATA_RELEASES[category]
+    if "shards" in conf and stockCode:
+        tag = shardTag(stockCode, category)
+    elif "shards" in conf:
+        tag = conf["shards"][0]["tag"]
     else:
-        tag = DATA_RELEASES[category]["tag"]
+        tag = conf["tag"]
     return f"{REPO_URL}/releases/download/{tag}"
 
 

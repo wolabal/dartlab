@@ -108,11 +108,15 @@ export async function ask(company, question, options = {}) {
  * @param {string} question
  * @param {object} options
  * @param {function} onMeta - meta 이벤트 콜백
+ * @param {function} onSnapshot - snapshot 이벤트 콜백 (핵심 수치 즉시 표시)
+ * @param {function} onContext - context 이벤트 콜백 (모듈별, 여러 번 호출됨)
+ * @param {function} onToolCall - tool_call 이벤트 콜백 (도구 호출)
+ * @param {function} onToolResult - tool_result 이벤트 콜백 (도구 결과)
  * @param {function} onChunk - chunk 이벤트 콜백
  * @param {function} onDone - done 이벤트 콜백
  * @param {function} onError - error 이벤트 콜백
  */
-export function askStream(company, question, options = {}, { onMeta, onChunk, onDone, onError }, history = null) {
+export function askStream(company, question, options = {}, { onMeta, onSnapshot, onContext, onToolCall, onToolResult, onChunk, onDone, onError }, history = null) {
 	const body = { question, stream: true, ...options };
 	if (company) body.company = company;
 	if (history && history.length > 0) body.history = history;
@@ -153,6 +157,10 @@ export function askStream(company, question, options = {}, { onMeta, onChunk, on
 						try {
 							const parsed = JSON.parse(data);
 							if (currentEvent === "meta") onMeta?.(parsed);
+							else if (currentEvent === "snapshot") onSnapshot?.(parsed);
+							else if (currentEvent === "context") onContext?.(parsed);
+							else if (currentEvent === "tool_call") onToolCall?.(parsed);
+							else if (currentEvent === "tool_result") onToolResult?.(parsed);
 							else if (currentEvent === "chunk") onChunk?.(parsed.text);
 							else if (currentEvent === "error") onError?.(parsed.error);
 							else if (currentEvent === "done") { if (!doneFired) { doneFired = true; onDone?.(); } }

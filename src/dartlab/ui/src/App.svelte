@@ -323,6 +323,36 @@
 					if (meta.company) updates.company = meta.company;
 					store.updateLastMessage(updates);
 				},
+				onSnapshot(snapshot) {
+					store.updateLastMessage({ snapshot });
+				},
+				onContext(ctx) {
+					const conv = store.active;
+					if (!conv) return;
+					const last = conv.messages[conv.messages.length - 1];
+					const prev = last?.contexts || [];
+					store.updateLastMessage({
+						contexts: [...prev, { module: ctx.module, label: ctx.label, text: ctx.text }],
+					});
+				},
+				onToolCall(ev) {
+					const conv = store.active;
+					if (!conv) return;
+					const last = conv.messages[conv.messages.length - 1];
+					const prev = last?.toolEvents || [];
+					store.updateLastMessage({
+						toolEvents: [...prev, { type: "call", name: ev.name, arguments: ev.arguments }],
+					});
+				},
+				onToolResult(ev) {
+					const conv = store.active;
+					if (!conv) return;
+					const last = conv.messages[conv.messages.length - 1];
+					const prev = last?.toolEvents || [];
+					store.updateLastMessage({
+						toolEvents: [...prev, { type: "result", name: ev.name, result: ev.result }],
+					});
+				},
 				onChunk(text) {
 					const conv = store.active;
 					if (!conv) return;
@@ -376,8 +406,17 @@
 	let hasConversation = $derived(store.active && store.active.messages.length > 0);
 	let noProviderAvailable = $derived(!statusLoading && (!activeProvider || !providers[activeProvider]?.available));
 
-	// 추천 Ollama 모델
-	const OLLAMA_SUGGESTIONS = ["gemma3", "llama3.1", "qwen2.5", "deepseek-r1", "phi4", "mistral"];
+	const OLLAMA_MODELS = [
+		{ name: "gemma3",       size: "3B",  gb: "2.3",  desc: "Google, 빠르고 가벼움",         tag: "추천" },
+		{ name: "gemma3:12b",   size: "12B", gb: "8.1",  desc: "Google, 균형잡힌 성능" },
+		{ name: "llama3.1",     size: "8B",  gb: "4.7",  desc: "Meta, 범용 최강",              tag: "추천" },
+		{ name: "qwen2.5",      size: "7B",  gb: "4.7",  desc: "Alibaba, 한국어 우수" },
+		{ name: "qwen2.5:14b",  size: "14B", gb: "9.0",  desc: "Alibaba, 한국어 최고 수준" },
+		{ name: "deepseek-r1",  size: "7B",  gb: "4.7",  desc: "추론 특화, 분석에 적합" },
+		{ name: "phi4",         size: "14B", gb: "9.1",  desc: "Microsoft, 수학/코드 강점" },
+		{ name: "mistral",      size: "7B",  gb: "4.1",  desc: "Mistral AI, 가볍고 빠름" },
+		{ name: "exaone3.5",    size: "8B",  gb: "4.9",  desc: "LG AI, 한국어 특화",           tag: "한국어" },
+	];
 </script>
 
 <svelte:window onkeydown={handleGlobalKeydown} />
@@ -796,19 +835,32 @@
 														</button>
 													</div>
 
-													<!-- 추천 모델 태그 -->
-													<div class="flex flex-wrap gap-1 mt-2">
-														{#each OLLAMA_SUGGESTIONS as s}
-															{#if !models.includes(s)}
-																<button
-																	class="px-2 py-0.5 rounded text-[10px] border border-dl-border text-dl-text-dim hover:text-dl-text hover:border-dl-primary/30 transition-colors"
-																	onclick={() => { pullModelName = s; }}
-																>
-																	{s}
-																</button>
-															{/if}
-														{/each}
-													</div>
+													<div class="mt-2.5 space-y-1">
+													{#each OLLAMA_MODELS as m}
+														{@const installed = models.some(i => i === m.name || i === m.name.split(":")[0])}
+														{#if !installed}
+															<button
+																class="flex items-center gap-2.5 w-full px-2.5 py-2 rounded-lg border border-dl-border/50 text-left hover:border-dl-primary/30 hover:bg-white/[0.02] transition-all group"
+																onclick={() => { pullModelName = m.name; startPullModel(); }}
+															>
+																<div class="flex-1 min-w-0">
+																	<div class="flex items-center gap-1.5">
+																		<span class="text-[11px] font-medium text-dl-text">{m.name}</span>
+																		<span class="px-1 py-px rounded text-[9px] bg-dl-bg-darker text-dl-text-dim">{m.size}</span>
+																		{#if m.tag}
+																			<span class="px-1 py-px rounded text-[9px] bg-dl-primary/15 text-dl-primary-light">{m.tag}</span>
+																		{/if}
+																	</div>
+																	<div class="text-[10px] text-dl-text-dim mt-0.5">{m.desc}</div>
+																</div>
+																<div class="flex items-center gap-1.5 flex-shrink-0">
+																	<span class="text-[9px] text-dl-text-dim">{m.gb} GB</span>
+																	<Download size={12} class="text-dl-text-dim group-hover:text-dl-primary-light transition-colors" />
+																</div>
+															</button>
+														{/if}
+													{/each}
+												</div>
 												{/if}
 											</div>
 										{/if}

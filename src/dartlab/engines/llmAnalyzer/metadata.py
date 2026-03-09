@@ -478,6 +478,15 @@ MODULE_META: dict[str, ModuleMeta] = {
 		),
 		relatedModules=("costByNature", "tangibleAsset"),
 	),
+
+	# ══════════════════════════════════════
+	# financeEngine 파생
+	# ══════════════════════════════════════
+	"ratios": ModuleMeta(
+		label="핵심 재무비율",
+		description="financeEngine이 자동계산한 수익성·안정성·밸류에이션 비율.",
+		unit="%",
+	),
 }
 
 

@@ -7,7 +7,7 @@
     dartlab ask 005930 "부채 리스크" --provider claude-code --stream
     dartlab status
     dartlab setup codex
-    dartlab ui                  # 웹 UI 실행 (http://localhost:8400)
+    dartlab ai                  # AI 분석 웹 인터페이스 (http://localhost:8400)
 """
 
 from __future__ import annotations
@@ -56,11 +56,17 @@ def main():
 	setup_parser = sub.add_parser("setup", help="LLM provider 설치 및 인증 안내")
 	setup_parser.add_argument("provider", nargs="?", default=None, choices=_CLI_PROVIDERS, help="설정할 provider")
 
-	# ── dartlab ui ──
-	ui_parser = sub.add_parser("ui", help="웹 UI 실행")
-	ui_parser.add_argument("--port", type=int, default=8400, help="포트 번호 (기본: 8400)")
-	ui_parser.add_argument("--host", default="0.0.0.0", help="호스트 (기본: 0.0.0.0)")
-	ui_parser.add_argument("--dev", action="store_true", help="개발 모드 (Svelte dev 서버 동시 실행)")
+	# ── dartlab ai ──
+	ai_parser = sub.add_parser("ai", help="AI 분석 웹 인터페이스 실행")
+	ai_parser.add_argument("--port", type=int, default=8400, help="포트 번호 (기본: 8400)")
+	ai_parser.add_argument("--host", default="0.0.0.0", help="호스트 (기본: 0.0.0.0)")
+	ai_parser.add_argument("--dev", action="store_true", help="개발 모드 (Svelte dev 서버 동시 실행)")
+
+	# ── dartlab ui (별칭, 하위 호환) ──
+	ui_parser = sub.add_parser("ui")
+	ui_parser.add_argument("--port", type=int, default=8400)
+	ui_parser.add_argument("--host", default="0.0.0.0")
+	ui_parser.add_argument("--dev", action="store_true")
 
 	args = parser.parse_args()
 
@@ -74,7 +80,7 @@ def main():
 		_cmd_ask(args)
 	elif args.command == "setup":
 		_cmd_setup(args)
-	elif args.command == "ui":
+	elif args.command in ("ai", "ui"):
 		_cmd_ui(args)
 
 
@@ -310,7 +316,7 @@ def _cmd_ui(args):
 				shell=True,
 			)
 
-		print(f"\n  DartLab UI (개발 모드)")
+		print(f"\n  DartLab AI (개발 모드)")
 		print(f"  API:     {url}")
 		print(f"  Svelte:  http://localhost:5400")
 		print()
@@ -322,13 +328,13 @@ def _cmd_ui(args):
 		if not ui_dir.exists():
 			print("\n  UI가 빌드되지 않았습니다.")
 			print("  개발 모드로 실행하세요:\n")
-			print(f"    dartlab ui --dev\n")
+			print(f"    dartlab ai --dev\n")
 			print("  또는 빌드 후 실행:")
 			print(f"    cd src/dartlab/ui && npm install && npm run build")
-			print(f"    dartlab ui\n")
+			print(f"    dartlab ai\n")
 			return
 
-		print(f"\n  DartLab UI")
+		print(f"\n  DartLab AI")
 		print(f"  {url}")
 		print()
 

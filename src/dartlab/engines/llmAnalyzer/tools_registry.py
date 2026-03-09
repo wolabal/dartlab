@@ -68,11 +68,41 @@ def register_defaults(company: Any) -> None:
 	"""Company 인스턴스에 바인딩된 기본 분석 도구 등록."""
 	clear_registry()
 
+	# 0. list_modules: 사용 가능한 모듈 목록 조회
+	def list_modules() -> str:
+		from dartlab.engines.llmAnalyzer.context import scan_available_modules
+		modules = scan_available_modules(company)
+		if not modules:
+			return "사용 가능한 데이터 모듈이 없습니다."
+		lines = ["| 모듈명 | 설명 | 유형 | 행수 |", "| --- | --- | --- | --- |"]
+		for m in modules:
+			lines.append(f"| `{m['name']}` | {m['label']} | {m.get('type', '-')} | {m.get('rows', '-')} |")
+		return "\n".join(lines)
+
+	register_tool(
+		"list_modules",
+		list_modules,
+		"이 기업에서 조회 가능한 모든 데이터 모듈 목록을 반환합니다. "
+		"어떤 데이터가 있는지 모를 때 먼저 호출하세요.",
+		{"type": "object", "properties": {}},
+	)
+
 	# 1. get_data: 파서 모듈 데이터 조회
 	def get_data(module_name: str) -> str:
 		data = getattr(company, module_name, None)
 		if data is None:
-			return f"'{module_name}' 데이터가 없습니다."
+			# 유사한 모듈명 제안
+			from dartlab.engines.llmAnalyzer.metadata import MODULE_META
+			suggestions = [
+				f"`{n}` ({m.label})"
+				for n, m in MODULE_META.items()
+				if module_name.lower() in n.lower() or module_name.lower() in m.label.lower()
+			]
+			msg = f"'{module_name}' 데이터가 없습니다."
+			if suggestions:
+				msg += f" 유사한 모듈: {', '.join(suggestions[:5])}"
+			msg += " `list_modules` 도구로 사용 가능한 모듈을 확인하세요."
+			return msg
 		if isinstance(data, pl.DataFrame):
 			return _df_to_md(data)
 		if isinstance(data, dict):
@@ -85,10 +115,19 @@ def register_defaults(company: Any) -> None:
 		"get_data",
 		get_data,
 		"기업의 재무/공시 데이터를 조회합니다. "
-		"module_name: BS(재무상태표), IS(손익계산서), CF(현금흐름표), "
+		"주요 module_name: "
+		"BS(재무상태표), IS(손익계산서), CF(현금흐름표), fsSummary(재무요약), "
 		"dividend(배당), audit(감사의견), majorHolder(최대주주), "
 		"executive(임원), employee(직원), rnd(R&D), segment(사업부문), "
-		"fsSummary(재무요약) 등",
+		"productService(주요제품), salesOrder(매출수주), "
+		"bond(채무증권), shareCapital(주식현황), capitalChange(자본변동), "
+		"contingentLiability(우발부채), sanction(제재현황), "
+		"subsidiary(자회사투자), affiliateGroup(계열사), "
+		"boardOfDirectors(이사회), executivePay(임원보수), "
+		"tangibleAsset(유형자산), costByNature(비용성격별분류), "
+		"riskDerivative(위험관리), internalControl(내부통제), "
+		"business(사업의내용), mdna(MD&A), companyOverviewDetail(회사개요). "
+		"모듈명을 모르면 먼저 `list_modules`를 호출하세요.",
 		{
 			"type": "object",
 			"properties": {
@@ -98,6 +137,62 @@ def register_defaults(company: Any) -> None:
 				},
 			},
 			"required": ["module_name"],
+		},
+	)
+
+	# 1b. search_data: 키워드로 데이터 검색
+	def search_data(keyword: str) -> str:
+		"""모든 모듈을 검색하여 키워드와 관련된 데이터를 찾습니다."""
+		from dartlab.engines.llmAnalyzer.metadata import MODULE_META
+		results = []
+		keyword_lower = keyword.lower()
+
+		for name, meta in MODULE_META.items():
+			try:
+				data = getattr(company, name, None)
+				if data is None:
+					continue
+				if isinstance(data, pl.DataFrame) and data.height > 0:
+					# 컬럼명에서 검색
+					matched_cols = [c for c in data.columns if keyword_lower in c.lower()]
+					# 계정명 컬럼에서 검색
+					if "계정명" in data.columns:
+						matched_rows = data.filter(
+							pl.col("계정명").str.contains(f"(?i){keyword}")
+						)
+						if matched_rows.height > 0:
+							results.append(f"### {meta.label} (`{name}`) — 계정명 매칭 {matched_rows.height}건")
+							results.append(_df_to_md(matched_rows, max_rows=10))
+					elif matched_cols:
+						results.append(f"### {meta.label} (`{name}`) — 컬럼 매칭: {', '.join(matched_cols)}")
+				elif isinstance(data, dict):
+					matched_keys = [k for k in data if keyword_lower in str(k).lower() or keyword_lower in str(data[k]).lower()]
+					if matched_keys:
+						results.append(f"### {meta.label} (`{name}`)")
+						for k in matched_keys[:5]:
+							results.append(f"- {k}: {data[k]}")
+			except Exception:
+				continue
+
+		if not results:
+			return f"'{keyword}'와 관련된 데이터를 찾지 못했습니다. 다른 키워드를 시도하거나 `list_modules`로 사용 가능한 데이터를 확인하세요."
+		return "\n\n".join(results)
+
+	register_tool(
+		"search_data",
+		search_data,
+		"키워드로 모든 데이터 모듈을 검색합니다. "
+		"특정 계정과목(예: '매출액', '부채'), 지표명, 또는 컬럼명으로 검색합니다. "
+		"어떤 모듈에 데이터가 있는지 모를 때 유용합니다.",
+		{
+			"type": "object",
+			"properties": {
+				"keyword": {
+					"type": "string",
+					"description": "검색할 키워드 (예: '매출', '부채비율', 'R&D', '이자비용')",
+				},
+			},
+			"required": ["keyword"],
 		},
 	)
 

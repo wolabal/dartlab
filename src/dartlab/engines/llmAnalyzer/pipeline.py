@@ -221,5 +221,6 @@ _PIPELINE_MAP: dict[str, list] = {
 	"성장성": [_run_growth_analysis],
 	"배당": [_run_dividend_analysis],
 	"리스크": [_run_risk_analysis],
+	"투자": [_run_growth_analysis],
 	"종합": [_run_health_analysis, _run_profitability_analysis, _run_growth_analysis],
 }

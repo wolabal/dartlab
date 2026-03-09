@@ -44,6 +44,10 @@ class RatioResult:
     fcf: Optional[float] = None
     revenueGrowth3Y: Optional[float] = None
 
+    netDebt: Optional[float] = None
+    netDebtRatio: Optional[float] = None
+    equityRatio: Optional[float] = None
+
     per: Optional[float] = None
     pbr: Optional[float] = None
     psr: Optional[float] = None
@@ -135,6 +139,15 @@ def _calcStability(r: RatioResult) -> None:
         raw = (r.currentAssets / r.currentLiabilities) * 100
         if raw <= 10000:
             r.currentRatio = round(raw, 2)
+
+    totalBorrowings = r.shortTermBorrowings + r.longTermBorrowings + r.bonds
+    r.netDebt = totalBorrowings - (r.cash or 0)
+
+    if r.totalEquity and r.totalEquity > 0:
+        r.netDebtRatio = round((r.netDebt / r.totalEquity) * 100, 2)
+
+    if r.totalAssets and r.totalAssets > 0 and r.totalEquity is not None:
+        r.equityRatio = round((r.totalEquity / r.totalAssets) * 100, 2)
 
 
 def _calcCashflow(

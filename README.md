@@ -6,7 +6,7 @@
 
 <h3>DartLab</h3>
 
-<p><b>숫자만 읽는 시대는 끝났다</b> — DART 공시의 숫자와 텍스트를 모두 읽는다</p>
+<p><b>Beyond the numbers</b> — Extract both financials and text from DART filings</p>
 
 <p>
 <a href="https://pypi.org/project/dartlab/"><img src="https://img.shields.io/pypi/v/dartlab?style=for-the-badge&color=ea4647&labelColor=050811&logo=pypi&logoColor=white" alt="PyPI"></a>
@@ -15,15 +15,24 @@
 </p>
 
 <p>
-<a href="https://eddmpython.github.io/dartlab/"><img src="https://img.shields.io/badge/Docs-GitHub_Pages-fb923c?style=for-the-badge&labelColor=050811&logo=github&logoColor=white" alt="Docs"></a>
+<a href="https://eddmpython.github.io/dartlab/">Docs</a> · <a href="README_KR.md">한국어</a> · <a href="https://buymeacoffee.com/eddmpython">Sponsor</a>
+</p>
+
+<p>
 <a href="https://github.com/eddmpython/dartlab/releases/tag/data-docs"><img src="https://img.shields.io/badge/Docs-260%2B_Companies-f87171?style=for-the-badge&labelColor=050811&logo=databricks&logoColor=white" alt="Docs Data"></a>
 <a href="https://github.com/eddmpython/dartlab/releases/tag/data-finance-1"><img src="https://img.shields.io/badge/Finance-2,700%2B_Companies-818cf8?style=for-the-badge&labelColor=050811&logo=databricks&logoColor=white" alt="Finance Data"></a>
-<a href="https://buymeacoffee.com/eddmpython"><img src="https://img.shields.io/badge/Sponsor-☕_Buy_Me_a_Coffee-ffdd00?style=for-the-badge&labelColor=050811" alt="Sponsor"></a>
+<a href="https://github.com/eddmpython/dartlab/releases/tag/data-report-1"><img src="https://img.shields.io/badge/Report-2,700%2B_Companies-34d399?style=for-the-badge&labelColor=050811&logo=databricks&logoColor=white" alt="Report Data"></a>
 </p>
 
 </div>
 
-## 설치
+## What is DartLab?
+
+DartLab is a Python library for parsing and analyzing [DART (Data Analysis, Retrieval and Transfer System)](https://dart.fss.or.kr/) — Korea's official electronic disclosure system. It extracts **both financial numbers and narrative text** from corporate filings.
+
+All data is accessed through simple properties on a `Company` object, following the yfinance-style API.
+
+## Installation
 
 ```bash
 pip install dartlab
@@ -33,95 +42,94 @@ pip install dartlab
 uv add dartlab
 ```
 
-## 빠른 시작
+## Quick Start
 
 ```python
 from dartlab import Company
 
-c = Company("005930")    # 종목코드
-c = Company("삼성전자")   # 회사명도 가능
-c.corpName               # "삼성전자"
+c = Company("005930")       # by stock code
+c = Company("삼성전자")      # by company name (Korean)
+c.corpName                   # "삼성전자"
 ```
 
-객체를 만들면 사용 가이드가 출력된다. 상세 가이드는 `c.guide()`로 볼 수 있다.
+Creating a `Company` object prints a usage guide. For the full guide, call `c.guide()`.
 
-데이터가 로컬에 없으면 GitHub Releases에서 자동 다운로드한다.
+Data is auto-downloaded from GitHub Releases when not found locally.
 
 ```python
-from dartlab.core import downloadAll
+from dartlab.core.dataLoader import downloadAll
 
-downloadAll("docs")                        # 260+ 종목 공시 문서 일괄 다운로드
-downloadAll("finance")                     # 2,700+ 종목 재무 숫자 일괄 다운로드
-downloadAll("finance", forceUpdate=True)   # 원격이 더 최신이면 재다운로드
+downloadAll("docs")                        # 260+ companies — disclosure documents
+downloadAll("finance")                     # 2,700+ companies — financial numbers
+downloadAll("report")                      # 2,700+ companies — periodic reports
+downloadAll("finance", forceUpdate=True)   # re-download if remote is newer
 ```
 
 ---
 
-## 무엇을 할 수 있나
+## Features
 
-DartLab은 DART 전자공시 문서에서 **숫자(재무제표)**와 **텍스트(사업보고서)**를 모두 추출한다. 모든 데이터는 property로 바로 접근할 수 있다.
-
-### 재무제표
+### Financial Statements
 
 ```python
-c.BS    # 재무상태표 DataFrame
-c.IS    # 손익계산서 DataFrame
-c.CF    # 현금흐름표 DataFrame
+c.BS    # Balance Sheet (DataFrame)
+c.IS    # Income Statement (DataFrame)
+c.CF    # Cash Flow Statement (DataFrame)
 ```
 
-### 기업 간 비교 가능한 시계열 (financeEngine)
+### Cross-Company Comparable Time Series (financeEngine)
 
-OpenDART 재무제표 데이터를 표준 계정으로 매핑하여 **기업 간 비교 가능한 분기별 시계열**을 제공한다.
+OpenDART financial data is mapped to standardized accounts, enabling **cross-company quarterly time series**.
 
 ```python
 series, periods = c.timeseries
 # periods = ["2016_Q1", "2016_Q2", ..., "2024_Q4"]
-# series["IS"]["revenue"]            # 분기별 매출 시계열
-# series["BS"]["total_assets"]       # 분기별 총자산
-# series["CF"]["operating_cashflow"] # 분기별 영업현금흐름
+# series["IS"]["revenue"]            # quarterly revenue
+# series["BS"]["total_assets"]       # quarterly total assets
+# series["CF"]["operating_cashflow"] # quarterly operating cash flow
 
 r = c.ratios
 r.roe               # 8.29 (%)
 r.operatingMargin   # 9.51 (%)
 r.debtRatio         # 27.4 (%)
-r.fcf               # 잉여현금흐름 (원)
+r.fcf               # Free Cash Flow (KRW)
 ```
 
-2,700+ 상장사 재무데이터를 동일한 snakeId 체계로 정규화하여, 어떤 기업이든 동일 구조의 시계열로 비교할 수 있다.
+2,700+ listed companies are normalized to the same snakeId schema, making any pair of companies directly comparable.
 
-요약재무정보를 시계열로 추출하고, K-IFRS 개정으로 계정명이 바뀌어도 같은 계정을 자동 추적한다 (Bridge Matching).
+### Summary Financials with Bridge Matching
+
+Extracts summary financial time series, automatically tracking accounts even when names change due to K-IFRS revisions.
 
 ```python
 result = c.fsSummary()
 
-result.FS          # 전체 재무제표 시계열 (Polars DataFrame)
-result.BS          # 재무상태표
-result.IS          # 손익계산서
-result.allRate     # 전체 매칭률 (예: 0.97)
-result.breakpoints # 변경점 목록
+result.FS          # Full financial time series (Polars DataFrame)
+result.BS          # Balance Sheet
+result.IS          # Income Statement
+result.allRate     # Overall match rate (e.g. 0.97)
+result.breakpoints # List of detected breakpoints
 ```
 
-### 주석 (K-IFRS)
-
-주석 데이터를 영문 속성 또는 한글 키로 바로 접근할 수 있다.
+### K-IFRS Notes (12 items)
 
 ```python
-c.notes.inventory          # 재고자산 DataFrame
-c.notes["재고자산"]         # 한글 키도 가능
-c.notes.receivables        # 매출채권
-c.notes.tangibleAsset      # 유형자산
-c.notes.intangibleAsset    # 무형자산
-c.notes.investmentProperty # 투자부동산
-c.notes.affiliates         # 관계기업
-c.notes.borrowings         # 차입금
-c.notes.provisions         # 충당부채
-c.notes.eps                # 주당이익
-c.notes.lease              # 리스
-c.notes.segments           # 부문정보
-c.notes.costByNature       # 비용의성격별분류
+c.notes.inventory          # Inventories
+c.notes["재고자산"]         # Korean key also works
+c.notes.receivables        # Trade receivables
+c.notes.tangibleAsset      # Property, plant & equipment
+c.notes.intangibleAsset    # Intangible assets
+c.notes.investmentProperty # Investment property
+c.notes.affiliates         # Associates
+c.notes.borrowings         # Borrowings
+c.notes.provisions         # Provisions
+c.notes.eps                # Earnings per share
+c.notes.lease              # Leases
+c.notes.segments           # Operating segments
+c.notes.costByNature       # Expenses by nature
 ```
 
-### 배당
+### Dividends
 
 ```python
 c.dividend
@@ -130,161 +138,169 @@ c.dividend
 # └──────┴───────────┴───────┴──────────────┴─────────────┴──────────────┴──────┘
 ```
 
-### 최대주주
+### Major Shareholders
 
 ```python
-c.majorHolder    # 최대주주 + 특수관계인 지분율 시계열 DataFrame
+c.majorHolder    # Largest shareholder + related parties ownership (time series)
 ```
 
-전체 Result 객체가 필요하면 `c.get("majorHolder")`로 접근한다.
+For the full Result object: `c.get("majorHolder")`
 
 ```python
 result = c.get("majorHolder")
 result.majorHolder   # "이재용"
 result.majorRatio    # 20.76
-result.timeSeries    # 지분율 시계열
+result.timeSeries    # Ownership ratio time series
 ```
 
-### 직원 현황
+### Employees
 
 ```python
 c.employee    # year, totalEmployees, avgSalary, avgTenure, ...
 ```
 
-### 감사의견
+### Audit Opinion
 
 ```python
 c.audit    # year, auditor, opinion, keyAuditMatters
 ```
 
-### 임원 현황
+### Executives
 
 ```python
 c.executive      # year, totalRegistered, insideDirectors, outsideDirectors, ...
 c.executivePay   # year, category, headcount, totalPay, avgPay
 ```
 
-### 주식 / 자본
+### Shares / Capital
 
 ```python
-c.shareCapital     # 발행·자기·유통 주식 DataFrame
-c.capitalChange    # 자본금 변동 DataFrame
-c.fundraising      # 증자/감자 DataFrame
+c.shareCapital     # Issued, treasury, outstanding shares
+c.capitalChange    # Capital changes
+c.fundraising      # Capital increases/decreases
 ```
 
-### 자회사 / 관계기업
+### Subsidiaries / Associates
 
 ```python
-c.subsidiary           # 타법인 출자 현황 DataFrame
-c.affiliateGroup       # 계열회사 현황 DataFrame
-c.investmentInOther    # 투자법인, 지분율, 장부가 DataFrame
+c.subsidiary           # Investments in other corporations
+c.affiliateGroup       # Affiliate group companies
+c.investmentInOther    # Investee, ownership ratio, book value
 ```
 
-### 이사회 / 지배구조
+### Board / Governance
 
 ```python
-c.boardOfDirectors     # 이사회 구성, 출석률 DataFrame
-c.shareholderMeeting   # 주주총회 안건, 결의 DataFrame
-c.auditSystem          # 감사위원, 감사활동 DataFrame
-c.internalControl      # 내부통제 평가 DataFrame
+c.boardOfDirectors     # Board composition, attendance
+c.shareholderMeeting   # Shareholder meeting agendas, resolutions
+c.auditSystem          # Audit committee, audit activities
+c.internalControl      # Internal control assessment
 ```
 
-### 리스크 / 법률
+### Risk / Legal
 
 ```python
-c.contingentLiability  # 우발부채, 채무보증, 소송 DataFrame
-c.relatedPartyTx       # 관계자거래 DataFrame
-c.sanction             # 제재·처벌 DataFrame
-c.riskDerivative       # 환율 민감도, 파생상품 DataFrame
+c.contingentLiability  # Contingent liabilities, lawsuits
+c.relatedPartyTx       # Related party transactions
+c.sanction             # Sanctions, penalties
+c.riskDerivative       # FX sensitivity, derivatives
 ```
 
-### 기타 재무
+### Other Financials
 
 ```python
-c.bond                 # 채무증권 DataFrame
-c.rnd                  # 연구개발비 DataFrame
-c.otherFinance         # 대손충당금 등 DataFrame
-c.productService       # 주요 제품/서비스 DataFrame
-c.salesOrder           # 매출실적, 수주잔고 DataFrame
-c.articlesOfIncorporation  # 정관 변경 이력 DataFrame
+c.bond                 # Debt securities
+c.rnd                  # R&D expenses
+c.otherFinance         # Allowance for bad debt, etc.
+c.productService       # Major products/services
+c.salesOrder           # Sales performance, order backlog
+c.articlesOfIncorporation  # Articles of incorporation amendments
 ```
 
-### 회사 정보
+### Company Info
 
 ```python
-c.companyHistory         # 연혁 DataFrame
-c.companyOverviewDetail  # 설립일, 상장일, 대표이사, 소재지 dict
+c.companyHistory         # Corporate history
+c.companyOverviewDetail  # Incorporation date, listing date, CEO, address
 ```
 
-### 공시 서술
+### Disclosure Narratives
 
 ```python
-c.business       # 사업의 내용 (sections + 변경 탐지)
-c.overview       # 회사의 개요 (설립일, 주소, 신용등급)
-c.mdna           # 경영진단의견 MD&A
-c.rawMaterial    # 원재료, 유형자산, 설비투자
+c.business       # Business overview (sections + change detection)
+c.overview       # Company overview (incorporation, address, credit rating)
+c.mdna           # Management Discussion & Analysis
+c.rawMaterial    # Raw materials, tangible assets, capex
+```
+
+### Raw Data Access
+
+```python
+c.rawDocs        # Original docs parquet (unprocessed)
+c.rawFinance     # Original finance parquet (unprocessed)
+c.rawReport      # Original periodic report parquet (unprocessed)
 ```
 
 ---
 
-## AI 기업분석 (dartlab ui)
+## AI Analysis (dartlab ai)
 
-DartLab의 구조화 데이터 위에서 LLM과 대화하며 기업을 분석할 수 있다.
+Chat with an LLM over DartLab's structured data to analyze companies interactively.
 
 ```bash
 pip install dartlab[ui]
-dartlab ui
+dartlab ai
 # → http://localhost:8400
 ```
 
-재무제표, 주석, 배당, 임원, 지배구조 등 DartLab이 추출한 모든 데이터를 컨텍스트로 제공하고, 자연어 질문에 대한 분석 답변을 스트리밍한다.
+Provides all extracted data — financial statements, notes, dividends, executives, governance — as context for natural-language Q&A with streaming responses.
 
-> **현재 지원 LLM: Ollama (로컬)**
+> **Currently supported LLM: Ollama (local)**
 >
-> 현재 버전에서는 **Ollama**를 통한 로컬 LLM만 지원한다. API 키 없이 무료로 사용할 수 있으며, 데이터가 외부로 전송되지 않는다.
+> The current version supports **Ollama** for local LLM inference. No API key needed, and your data stays on your machine.
 >
-> - [Ollama 설치](https://ollama.com/download) 후 `ollama pull gemma3` 등으로 모델을 다운로드
-> - UI 설정에서 모델 선택 및 다운로드 가능
-> - GPU(NVIDIA/AMD)가 있으면 자동 감지하여 가속
+> - Install [Ollama](https://ollama.com/download), then `ollama pull gemma3` to download a model
+> - Select and download models in the UI settings
+> - GPU (NVIDIA/AMD) is auto-detected for acceleration
 >
-> **향후 계획**: OpenAI(GPT), Anthropic(Claude) 등 클라우드 LLM provider를 추가할 예정이다.
+> **Coming soon**: Cloud LLM providers (OpenAI, Anthropic, etc.)
 
 ---
 
-## 전체 추출
+## Bulk Extraction
 
 ```python
-d = c.all()    # 모든 모듈 데이터를 dict로 반환 (progress bar)
+d = c.all()    # All module data as dict (with progress bar)
 # {"BS": df, "IS": df, "CF": df, "dividend": df, "notes": {...},
 #  "timeseries": (series, periods), "ratios": RatioResult, ...}
 ```
 
 ```python
 import dartlab
-dartlab.verbose = False    # 진행 표시 끄기
+dartlab.verbose = False    # Suppress progress output
 
-d = c.all()    # 조용히 추출
+d = c.all()    # Silent extraction
 ```
 
 ---
 
-## Result 객체
+## Result Object
 
-property는 대표 DataFrame을 반환한다. 모듈의 전체 Result 객체가 필요하면 `c.get()`을 사용한다.
+Properties return the primary DataFrame. For the full Result object, use `c.get()`.
 
 ```python
-# property — DataFrame 바로 반환
-c.audit          # opinionDf (감사의견 DataFrame)
+# property — returns DataFrame directly
+c.audit          # opinionDf (audit opinion DataFrame)
 
-# get() — 전체 Result 객체
+# get() — returns full Result object
 result = c.get("audit")
-result.opinionDf   # 감사의견
-result.feeDf       # 감사보수
+result.opinionDf   # Audit opinion
+result.feeDf       # Audit fees
 ```
 
 ---
 
-## 종목 검색
+## Company Search
 
 ```python
 from dartlab import Company
@@ -294,215 +310,133 @@ Company.search("삼성")
 # │ 회사명       ┆ 종목코드 ┆ 업종           │
 # └──────────────┴──────────┴────────────────┘
 
-Company.listing()   # KRX 전체 상장법인 목록
-Company.status()    # 로컬 보유 종목 인덱스
-c.docs()            # 공시 문서 목록 + DART 뷰어 링크
+Company.listing()   # Full KRX listed companies
+Company.status()    # Local data index
+c.docs()            # Filing list + DART viewer links
 ```
 
 ---
 
-## 핵심 기술
+## Core Technology
 
-### 공시 수평 정렬
+### Horizontal Alignment of Filings
 
-DART 전자공시는 보고서마다 담고 있는 기간이 다르다.
+DART filings cover different periods depending on report type:
 
 ```
-                           1분기      2분기      3분기      4분기
+                           Q1         Q2         Q3         Q4
                           ┌──────┐
- 1분기 보고서              │  Q1  │
+ Q1 Report                │  Q1  │
                           └──────┘
                           ┌──────────────┐
- 반기 보고서               │   Q1 + Q2    │
+ Semi-Annual              │   Q1 + Q2    │
                           └──────────────┘
                           ┌─────────────────────┐
- 3분기 보고서              │    Q1 + Q2 + Q3     │
+ Q3 Report                │    Q1 + Q2 + Q3     │
                           └─────────────────────┘
                           ┌──────────────────────────────┐
- 사업 보고서               │       Q1 + Q2 + Q3 + Q4      │
+ Annual Report            │       Q1 + Q2 + Q3 + Q4      │
                           └──────────────────────────────┘
 ```
 
-1분기 보고서에는 Q1만, 반기에는 Q1+Q2 누적, 사업보고서에는 1년 전체가 들어있다. 이 누적 구조에서 개별 분기 실적을 역산하고, 보고서 간 계정명이 바뀌어도 같은 계정을 추적하는 것이 DartLab의 핵심이다.
+Q1 reports contain only Q1, semi-annual reports contain cumulative Q1+Q2, and annual reports contain the full year. DartLab reverse-engineers standalone quarterly figures from these cumulative structures, and tracks accounts even when names change between filings.
 
 ### Bridge Matching
 
-K-IFRS 개정이나 내부 구조 변경으로 **동일 기업 안에서** 계정명이 바뀌는 경우가 빈번하다. Bridge Matching은 인접 연도의 재무제표에서 금액과 명칭 유사도를 조합해 동일 계정을 자동으로 연결한다.
+K-IFRS revisions and internal restructuring frequently cause **account name changes within the same company**. Bridge Matching combines amount matching and name similarity across adjacent years to automatically link identical accounts.
 
 ```
-             2022년            2023년            2024년
+             2022              2023              2024
              ──────            ──────            ──────
  매출액 ────────────── 매출액 ────────────── 수익(매출액)
-                              ↑ 명칭 변경                ↑ 명칭 변경
+                              ↑ name change              ↑ name change
  영업이익 ──────────── 영업이익 ──────────── 영업이익
  당기순이익 ────────── 당기순이익 ────────── 당기순이익(손실)
 ```
 
-4단계 매칭으로 구성된다.
+Four-stage matching process:
 
-1. **정확 매칭** — 금액이 완전히 동일한 계정 연결
-2. **재작성 매칭** — 소수점 오차(0.5 이내) 허용
-3. **명칭 변경 매칭** — 금액 오차 5% 이내 + 명칭 유사도 60% 이상
-4. **특수 항목 매칭** — 주당이익(EPS) 등 소수점 단위 항목
+1. **Exact match** — identical amounts
+2. **Restatement match** — within 0.5 tolerance
+3. **Name change match** — amount error < 5% AND name similarity > 60%
+4. **Special item match** — decimal-unit items like EPS
 
-매칭률이 85% 이하로 떨어지면 변경점(breakpoint)으로 판정하고 구간을 분리한다.
-
----
-
-## 패키지 구조
-
-### finance — 정량 재무 데이터 (36개 모듈)
-
-| property | 설명 |
-|----------|------|
-| `c.BS` / `c.IS` / `c.CF` | 재무상태표, 손익계산서, 현금흐름표 |
-| `c.fsSummary()` | 요약재무정보 + Bridge Matching |
-| `c.dividend` | 배당 시계열 |
-| `c.majorHolder` | 최대주주 지분율 |
-| `c.holderOverview` | 5% 주주, 소액주주, 의결권 |
-| `c.employee` | 직원 현황 |
-| `c.shareCapital` | 발행·자기·유통 주식 |
-| `c.subsidiary` | 타법인 출자 현황 |
-| `c.bond` | 채무증권 발행실적 |
-| `c.audit` | 감사의견 + 감사보수 |
-| `c.executive` | 임원 현황 |
-| `c.executivePay` | 임원 보수 |
-| `c.boardOfDirectors` | 이사회 구성·출석률 |
-| `c.capitalChange` | 자본금 변동 |
-| `c.contingentLiability` | 우발부채·소송 |
-| `c.relatedPartyTx` | 관계자 거래 |
-| `c.sanction` | 제재·처벌 |
-| `c.rnd` | 연구개발비 |
-| `c.internalControl` | 내부통제 평가 |
-| `c.affiliateGroup` | 계열회사 현황 |
-| `c.fundraising` | 증자/감자 |
-| `c.salesOrder` | 매출실적·수주상황 |
-| `c.productService` | 주요 제품/서비스 |
-| `c.riskDerivative` | 위험관리·파생거래 |
-| `c.articlesOfIncorporation` | 정관 변경 이력 |
-| `c.otherFinance` | 대손충당금 등 |
-| `c.companyHistory` | 연혁 |
-| `c.shareholderMeeting` | 주주총회 |
-| `c.auditSystem` | 감사제도 |
-| `c.investmentInOther` | 타법인출자 |
-| `c.companyOverviewDetail` | 회사개요 상세 |
-
-### K-IFRS 주석 (12개 항목)
-
-| property | 설명 |
-|----------|------|
-| `c.notes.receivables` | 매출채권 |
-| `c.notes.inventory` | 재고자산 |
-| `c.notes.tangibleAsset` | 유형자산 |
-| `c.notes.intangibleAsset` | 무형자산 |
-| `c.notes.investmentProperty` | 투자부동산 |
-| `c.notes.affiliates` | 관계기업 |
-| `c.notes.borrowings` | 차입금 |
-| `c.notes.provisions` | 충당부채 |
-| `c.notes.eps` | 주당이익 |
-| `c.notes.lease` | 리스 |
-| `c.notes.segments` | 부문정보 |
-| `c.notes.costByNature` | 비용의성격별분류 |
-
-한글 키도 지원: `c.notes["재고자산"]`
-
-### disclosure — 공시 서술형 섹션 (4개 모듈)
-
-| property | 설명 |
-|----------|------|
-| `c.business` | 사업의 내용 + 변경 탐지 |
-| `c.overview` | 회사의 개요 (설립일, 주소, 신용등급) |
-| `c.mdna` | 경영진단의견 (MD&A) |
-| `c.rawMaterial` | 원재료, 유형자산, 설비투자 |
+When match rate drops below 85%, a breakpoint is detected and the segment is split.
 
 ---
 
-## 데이터
+## Data
 
-DART 전자공시 개별 섹션을 수집해서 만든 구조화 데이터다.
+### Sources and Integrity
 
-각 Parquet 파일에는 하나의 기업에 대한 모든 공시 문서가 들어있다.
+All data originates from **[OpenDART](https://opendart.fss.or.kr/)** and **[DART](https://dart.fss.or.kr/)**, Korea's official electronic disclosure system. The developer has **not modified a single number** — only metadata columns (stock code, year, report type, etc.) have been added for structural organization.
 
-- **메타데이터**: 종목코드, 회사명, 보고서 유형, 제출일, 사업연도
-- **정량 데이터**: 요약재무정보, 재무제표 본문, 주석
-- **텍스트 데이터**: 사업의 내용, 감사의견, 위험관리, 임원/주주 현황
+If you want to verify, you can cross-check any value against the original filings using the package's built-in DART viewer links (`c.docs()`).
 
-| 카테고리 | 릴리즈 태그 | 설명 |
-|----------|------------|------|
-| 공시 문서 | [`data-docs`](https://github.com/eddmpython/dartlab/releases/tag/data-docs) | 260+ 상장사 사업보고서 파싱 데이터 |
-| 재무 숫자 | `data-finance-1` ~ `data-finance-4` | 2,700+ 상장사 재무제표 숫자 데이터 |
+Each Parquet file contains all filings for a single company:
 
-finance 데이터는 GitHub Release 1000 에셋 제한으로 종목코드 범위별 4개 태그로 분할되어 있다. `loadData()`, `downloadAll()`은 이를 자동으로 처리한다.
+- **Metadata**: stock code, company name, report type, filing date, business year
+- **Quantitative**: summary financials, financial statement body, notes
+- **Narrative**: business description, audit opinion, risk management, executive/shareholder status
 
-`loadData()`는 로컬에 파일이 없으면 자동으로 다운로드한다.
+### Data Releases
 
-> **데이터 업데이트 주기**
+| Category | Release Tags | Description | Count |
+|----------|-------------|-------------|-------|
+| Disclosure | [`data-docs`](https://github.com/eddmpython/dartlab/releases/tag/data-docs) | Parsed annual report sections | 260+ |
+| Finance | [`data-finance-1`](https://github.com/eddmpython/dartlab/releases/tag/data-finance-1) [`2`](https://github.com/eddmpython/dartlab/releases/tag/data-finance-2) [`3`](https://github.com/eddmpython/dartlab/releases/tag/data-finance-3) [`4`](https://github.com/eddmpython/dartlab/releases/tag/data-finance-4) | XBRL financial statement numbers | 2,700+ |
+| Report | [`data-report-1`](https://github.com/eddmpython/dartlab/releases/tag/data-report-1) [`2`](https://github.com/eddmpython/dartlab/releases/tag/data-report-2) [`3`](https://github.com/eddmpython/dartlab/releases/tag/data-report-3) [`4`](https://github.com/eddmpython/dartlab/releases/tag/data-report-4) | Periodic report data | 2,700+ |
+
+Finance and Report data are split into 4 tags by stock code range (GitHub's 1000-asset-per-release limit). `loadData()` and `downloadAll()` handle this automatically.
+
+### Bring Your Own Data
+
+If you structure your own Parquet files to match DartLab's schema, all existing features work out of the box. Place files as `data/{category}/{stockCode}.parquet` and every property, extraction module, and analysis tool will function normally.
+
+### Disclaimer
+
+This project is licensed under MIT. While the data faithfully mirrors OpenDART public disclosures, **no guarantee of commercial reliability is provided**. Always verify against official sources for investment or compliance decisions.
+
+> **Update frequency**
 >
-> 비용이 발생하는 프록시를 사용하지 않고 직접 수집하고 있어서 데이터 업데이트가 매우 느리다. 새로운 종목 추가나 최신 공시 반영에 시간이 걸릴 수 있다.
+> Data is collected directly without paid proxies, so updates may be slow. Adding new companies or reflecting the latest filings may take time.
 
 ---
 
-## 왜 만들었나
+## Why DartLab?
 
-DART 전자공시에는 재무제표 숫자뿐 아니라 사업의 내용, 위험 요인, 감사의견, 소송 현황, 지배구조 변동 같은 텍스트 정보가 함께 들어있다. 대부분의 도구는 숫자만 뽑아간다. 나머지는 버려진다.
+DART filings contain far more than financial numbers — business descriptions, risk factors, audit opinions, litigation status, and governance changes are all embedded in the text. Most tools only extract the numbers. The rest is discarded.
 
-DartLab은 숫자와 텍스트를 모두 추출한다. 분기/반기/사업보고서를 하나의 시간축 위에 정렬하고, 동일 기업 안에서 K-IFRS 개정이나 구조 변경으로 계정명이 바뀌어도 같은 계정을 자동으로 추적한다.
+DartLab extracts both. It aligns quarterly, semi-annual, and annual reports on a single time axis, and automatically tracks accounts even when K-IFRS revisions or restructuring changes their names.
 
-> **현재 범위**
+> **Current scope**
 >
-> Bridge Matching은 **한 회사 내**에서 연도 간 계정명 변경을 추적하는 기능이다. financeEngine은 **회사 간 비교**가 가능하도록 XBRL 계정을 표준 snakeId로 매핑한다. 2,700+ 상장사의 재무제표를 동일 구조로 정규화하여 교차 비교할 수 있다.
+> Bridge Matching tracks account name changes **within a single company** across years. financeEngine enables **cross-company comparison** by mapping XBRL accounts to standardized snakeIds. 2,700+ listed companies are normalized to the same structure.
 >
-> 텍스트 분석 영역은 **별도 프로젝트에서 추진 중인 전문 텍스트 분석 모듈**을 DartLab에 통합할 계획이다.
+> Text analysis capabilities are being developed in a **separate project** and will be integrated into DartLab.
 >
-> 종목 하나가 아니라 시장 전체를 한 번에 분석할 수 있는 도구가 최종 목표다.
+> The ultimate goal is a tool that can analyze the **entire market** at once, not just one company.
 
-## 비전
+## Roadmap
 
-DartLab의 최종 목표는 **전자공시 데이터의 완전한 활용**이다.
-
-**현재 (v0.2.1)** — 문서 파싱 + 기업 간 비교 + AI 기업분석
-- 36개 분석 모듈로 단일 기업의 재무제표, 주석, 텍스트를 시계열로 추출
-- Bridge Matching으로 동일 기업 내 계정명 변경 자동 추적
-- **financeEngine**: XBRL 계정 표준화 → 2,700+ 상장사 교차 비교 가능
-- 260+ 상장사 공시 문서 데이터 + 2,700+ 상장사 재무 숫자 데이터
-- property 기반 접근 — `c.BS`, `c.timeseries`, `c.ratios`, `c.notes.inventory`
-- **dartlab ui**: Ollama 기반 AI 기업분석 웹 인터페이스 (로컬 LLM)
-
-**다음 단계** — LLM Provider 확장 + 시장 전체 분석
-- OpenAI(GPT), Anthropic(Claude) 등 클라우드 LLM provider 추가
-- 업종별, 규모별 그룹 비교 및 시장 전체 스크리닝
-
-**텍스트 분석 고도화** — AI + 별도 프로젝트 연계
-- 현재 별도 프로젝트에서 전문 텍스트 이해 패키지를 개발 중
-- 공시 문서 텍스트의 시계열 비교, 섹션별 변경 추적, 의미 분석 등
-- 추후 AI와 eddmpython의 텍스트 이해 패키지를 결합하여, 공시 문서의 모든 경우에 대응되는 범용 헬퍼로 DartLab에 투입할 예정
-- 현재 DartLab이 파싱한 구조화 데이터 위에서 동작하는 지능형 분석 레이어가 최종 형태
-
-**최종 목표** — 정량·정성 교차 검증
-- 정량 변동과 정성 변화의 연결 (실적 악화 ↔ 위험 요인 텍스트 변화)
-- 감사의견, 지배구조 변동 등 리스크 시그널 자동 탐지
-- 종목 하나가 아니라 시장 전체를 한 번에 분석
-
-## 로드맵
-
-- [x] 요약재무정보 시계열 (Bridge Matching)
-- [x] 연결재무제표 BS, IS, CF
-- [x] 부문별 매출, 관계기업, 배당, 직원, 주주, 자회사
-- [x] 채무증권, 비용 성격별 분류, 원재료/설비투자
-- [x] 감사의견, 임원 현황, 임원 보수
-- [x] 유형자산 변동표, 주석 세부항목 (23개 키워드)
-- [x] 이사회, 자본금 변동, 우발부채, 대주주 거래, 제재, 연구개발, 내부통제
-- [x] 계열회사, 증자/감자, 매출·수주, 주요 제품, 위험관리·파생거래
-- [x] 경영진단의견, 사업의 내용, 회사의 개요
-- [x] Company property 기반 접근 + Notes 통합 + all()
-- [x] rich 기반 터미널 출력 (아바타 + 사용 가이드)
-- [x] 계정 표준화 엔진 (financeEngine) — 2,700+ 상장사 교차 비교
-- [x] 분기별 시계열 + 재무비율 (c.timeseries, c.ratios)
-- [x] AI 기업분석 웹 인터페이스 (dartlab ui) — Ollama 로컬 LLM
-- [ ] 클라우드 LLM provider 추가 (OpenAI, Anthropic 등)
-- [ ] 텍스트 분석 모듈 통합 (별도 프로젝트에서 배치 예정)
-- [ ] 정량 + 정성 교차 검증
-- [ ] 시각화
+- [x] Summary financial time series (Bridge Matching)
+- [x] Consolidated BS, IS, CF
+- [x] Segment revenue, associates, dividends, employees, shareholders, subsidiaries
+- [x] Debt securities, expenses by nature, raw materials/capex
+- [x] Audit opinion, executive status, executive compensation
+- [x] PPE movement, note details (23 keywords)
+- [x] Board of directors, capital changes, contingent liabilities, related party tx, sanctions, R&D, internal control
+- [x] Affiliate groups, capital raises, sales/orders, products, risk management/derivatives
+- [x] MD&A, business description, company overview
+- [x] Company property API + Notes integration + all()
+- [x] Rich terminal output (avatar + usage guide)
+- [x] Account standardization engine (financeEngine) — 2,700+ companies cross-comparable
+- [x] Quarterly time series + financial ratios (c.timeseries, c.ratios)
+- [x] AI analysis web interface (dartlab ai) — Ollama local LLM
+- [ ] Cloud LLM providers (OpenAI, Anthropic, etc.)
+- [ ] Text analysis module integration (from separate project)
+- [ ] Quantitative + qualitative cross-validation
+- [ ] Visualization
 
 ## Sponsor
 
@@ -510,6 +444,6 @@ DartLab의 최종 목표는 **전자공시 데이터의 완전한 활용**이다
   <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" width="180"/>
 </a>
 
-## 라이선스
+## License
 
 MIT License

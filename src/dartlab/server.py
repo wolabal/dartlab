@@ -114,7 +114,7 @@ def api_status():
 @app.post("/api/configure")
 def api_configure(req: ConfigureRequest):
 	"""LLM provider 설정. API 키 검증 포함."""
-	from dartlab.engines.llmAnalyzer import get_config
+	from dartlab.engines.llmAnalyzer import configure, get_config
 	from dartlab.engines.llmAnalyzer.providers import create_provider
 	from dartlab.engines.llmAnalyzer.types import LLMConfig
 
@@ -132,7 +132,7 @@ def api_configure(req: ConfigureRequest):
 		kwargs["base_url"] = req.base_url
 	elif current.base_url and current.provider == req.provider:
 		kwargs["base_url"] = current.base_url
-	dartlab.llm.configure(**kwargs)
+	configure(**kwargs)
 
 	# 설정 후 실제 사용 가능한지 체크
 	available = False
@@ -359,31 +359,42 @@ def api_company(code: str):
 		raise HTTPException(status_code=404, detail=str(e))
 
 
-def _try_resolve_company(req: AskRequest) -> Company | None:
-	"""company 필드 또는 질문에서 종목을 찾는다. 못 찾으면 None."""
-	if req.company:
-		try:
-			return Company(req.company)
-		except Exception:
-			return None
+@app.get("/api/company/{code}/modules")
+def api_company_modules(code: str):
+	"""기업의 사용 가능한 데이터 모듈 목록."""
+	try:
+		from dartlab.engines.llmAnalyzer.context import scan_available_modules
+		c = Company(code)
+		modules = scan_available_modules(c)
+		return {"stockCode": c.stockCode, "corpName": c.corpName, "modules": modules}
+	except Exception as e:
+		raise HTTPException(status_code=404, detail=str(e))
 
-	import re
-	q = req.question
-	code_match = re.search(r'\b(\d{6})\b', q)
-	if code_match:
-		try:
-			return Company(code_match.group(1))
-		except Exception:
-			return None
 
-	words = re.split(r'\s+', q)
-	for length in range(min(4, len(words)), 0, -1):
-		for i in range(len(words) - length + 1):
-			candidate = " ".join(words[i:i + length])
-			if len(candidate) < 2:
+_COMPANY_SUFFIXES = ("차", "전자", "그룹", "건설", "화학", "제약", "바이오", "증권", "보험", "은행", "금융", "지주", "산업", "통신", "에너지")
+
+
+def _search_fuzzy(query: str) -> Company | None:
+	"""단일 쿼리로 Company.search → Company 반환. 실패 시 접미사 제거 후 재시도."""
+	if len(query) < 2:
+		return None
+	try:
+		df = Company.search(query)
+		if len(df) > 0:
+			row = df.to_dicts()[0]
+			code = row.get("종목코드", row.get("stockCode", ""))
+			if code:
+				return Company(code)
+	except Exception:
+		pass
+
+	for suffix in _COMPANY_SUFFIXES:
+		if query.endswith(suffix) and len(query) > len(suffix):
+			stripped = query[:-len(suffix)]
+			if len(stripped) < 2:
 				continue
 			try:
-				df = Company.search(candidate)
+				df = Company.search(stripped)
 				if len(df) > 0:
 					row = df.to_dicts()[0]
 					code = row.get("종목코드", row.get("stockCode", ""))
@@ -391,7 +402,105 @@ def _try_resolve_company(req: AskRequest) -> Company | None:
 						return Company(code)
 			except Exception:
 				continue
+	return None
 
+
+def _search_suggestions(question: str) -> list[dict[str, str]]:
+	"""질문에서 단어를 추출하여 비슷한 종목 후보를 검색한다."""
+	import re
+	words = re.split(r'\s+', question)
+	seen_codes: set[str] = set()
+	suggestions: list[dict[str, str]] = []
+
+	for word in words:
+		if len(word) < 2:
+			continue
+		queries = [word]
+		for suffix in _COMPANY_SUFFIXES:
+			if word.endswith(suffix) and len(word) > len(suffix):
+				queries.append(word[:-len(suffix)])
+		for q in queries:
+			try:
+				df = Company.search(q)
+				for row in df.head(3).to_dicts():
+					code = row.get("종목코드", row.get("stockCode", ""))
+					name = row.get("회사명", row.get("corpName", ""))
+					if code and code not in seen_codes:
+						seen_codes.add(code)
+						suggestions.append({"corpName": name, "stockCode": code})
+						if len(suggestions) >= 5:
+							return suggestions
+			except Exception:
+				continue
+	return suggestions
+
+
+class _ResolveResult:
+	"""종목 검색 결과를 담는 컨테이너."""
+	__slots__ = ("company", "not_found", "suggestions")
+
+	def __init__(self, company: Company | None = None, *, not_found: bool = False, suggestions: list[dict[str, str]] | None = None):
+		self.company = company
+		self.not_found = not_found
+		self.suggestions = suggestions or []
+
+
+def _build_not_found_msg(suggestions: list[dict[str, str]]) -> str:
+	"""NOT_FOUND 안내 메시지. 후보가 있으면 목록 포함."""
+	if not suggestions:
+		return (
+			"해당 종목을 찾을 수 없습니다. "
+			"정확한 종목명(예: 삼성전자, 기아, LG에너지솔루션) 또는 "
+			"6자리 종목코드(예: 005930)로 다시 질문해 주세요."
+		)
+	lines = ["해당 종목을 정확히 찾지 못했습니다. 혹시 아래 종목을 찾으시나요?\n"]
+	for s in suggestions:
+		lines.append(f"- **{s['corpName']}** ({s['stockCode']})")
+	lines.append("\n종목명이나 종목코드를 정확히 입력하시면 바로 분석해 드리겠습니다.")
+	return "\n".join(lines)
+
+
+def _try_resolve_company(req: AskRequest) -> _ResolveResult:
+	"""company 필드 또는 질문에서 종목을 찾는다."""
+	if req.company:
+		try:
+			return _ResolveResult(company=Company(req.company))
+		except Exception:
+			suggestions = _search_suggestions(req.company)
+			return _ResolveResult(not_found=True, suggestions=suggestions)
+
+	import re
+	q = req.question
+	code_match = re.search(r'\b(\d{6})\b', q)
+	if code_match:
+		try:
+			return _ResolveResult(company=Company(code_match.group(1)))
+		except Exception:
+			return _ResolveResult(not_found=True)
+
+	words = re.split(r'\s+', q)
+	for length in range(min(4, len(words)), 0, -1):
+		for i in range(len(words) - length + 1):
+			candidate = " ".join(words[i:i + length])
+			result = _search_fuzzy(candidate)
+			if result:
+				return _ResolveResult(company=result)
+
+	return _ResolveResult()
+
+
+def _try_resolve_from_history(history: list[HistoryMessage]) -> Company | None:
+	"""대화 히스토리에서 가장 최근 언급된 종목코드를 찾는다."""
+	import re
+	for msg in reversed(history):
+		if not msg.text:
+			continue
+		code_match = re.search(r'\b(\d{6})\b', msg.text)
+		if code_match:
+			try:
+				return Company(code_match.group(1))
+			except Exception:
+				continue
 	return None
 
 
@@ -401,8 +510,7 @@ async def api_ask(req: AskRequest):
 	dartlab.verbose = False
 
 	if req.provider or req.model:
-		# 기존 설정을 유지하면서 provider/model만 오버라이드
-		from dartlab.engines.llmAnalyzer import get_config
+		from dartlab.engines.llmAnalyzer import configure, get_config
 		current = get_config()
 		overrides: dict[str, Any] = {
 			"provider": req.provider or current.provider,
@@ -413,15 +521,21 @@ async def api_ask(req: AskRequest):
 			overrides["api_key"] = current.api_key
 		if current.base_url:
 			overrides["base_url"] = current.base_url
-		dartlab.llm.configure(**overrides)
+		configure(**overrides)
 
-	c = _try_resolve_company(req)
+	resolved = _try_resolve_company(req)
+	c: Company | None = resolved.company
+	if not c and not resolved.not_found and req.history:
+		c = _try_resolve_from_history(req.history)
 
 	if req.stream:
 		return EventSourceResponse(
-			_stream_ask(c, req),
+			_stream_ask(c, req, not_found_msg=_build_not_found_msg(resolved.suggestions) if resolved.not_found else None),
 			media_type="text/event-stream",
 		)
+
+	if resolved.not_found:
+		return {"answer": _build_not_found_msg(resolved.suggestions)}
 
 	if c is None:
 		return await _plain_chat(req)
@@ -444,11 +558,30 @@ async def api_ask(req: AskRequest):
 
 _CHAT_SYSTEM_PROMPT = (
 	"당신은 DartLab의 금융 분석 AI 어시스턴트입니다. "
-	"한국 주식시장과 DART 공시 데이터에 대해 전문적으로 답변합니다. "
-	"특정 종목을 분석하려면 종목명을 알려달라고 안내하세요.\n\n"
-	"답변 시 수치 데이터가 포함되면 반드시 마크다운 테이블(|표)을 적극 활용하세요. "
-	"시계열 데이터(연도별 매출, 이익률 추이 등)는 테이블로 정리하고, "
-	"비교 데이터도 테이블로 제시하세요. 핵심 수치는 **굵게** 표시하세요."
+	"한국 주식시장과 DART 전자공시 데이터에 대해 전문적으로 답변합니다.\n\n"
+	"## DartLab 데이터 안내\n"
+	"DartLab은 한국 DART 전자공시 시스템의 공시 데이터를 분석합니다.\n"
+	"현재 보유 데이터:\n"
+	"- **공시 문서(docs)**: 267개 주요 상장기업의 정기보고서 파싱 데이터\n"
+	"  - 재무제표 36개 항목 (매출, 영업이익, 자산, 부채 등)\n"
+	"  - 공시 서술 섹션 4개 항목 (사업개요, 위험요소, 주요계약, 연구개발)\n"
+	"  - K-IFRS 주석 12개 항목 (재고자산, 매출채권, 유형자산 등)\n"
+	"- **재무제표(finance)**: 2,743개 상장기업의 XBRL 재무제표 (2015~최근)\n"
+	"  - 손익계산서, 재무상태표, 현금흐름표\n"
+	"  - 분기별 standalone 시계열\n"
+	"  - 재무비율 자동 계산 (ROE, ROA, 부채비율, 영업이익률 등)\n\n"
+	"사용자가 '어떤 데이터가 있나', '뭘 분석할 수 있나' 같은 메타 질문을 하면 위 내용을 바탕으로 안내하세요.\n\n"
+	"## 역할\n"
+	"- 특정 종목이 언급되면 해당 기업의 DART 공시 데이터를 기반으로 분석합니다.\n"
+	"- 종목이 언급되지 않으면 일반적인 금융/투자 지식으로 답변합니다.\n"
+	"- 특정 종목을 분석하려면 종목명이나 종목코드(예: 삼성전자, 005930)를 알려달라고 안내하세요.\n\n"
+	"## 답변 규칙\n"
+	"- 수치가 2개 이상 등장하면 반드시 마크다운 테이블(|표)로 정리하세요. 텍스트 나열보다 테이블이 항상 우선입니다.\n"
+	"- 시계열 데이터(연도별 매출, 이익률 추이 등)는 해석 컬럼(판단, 전년비 등)을 추가한 분석 테이블로 정리하세요.\n"
+	"- 핵심 수치는 **굵게** 표시하세요.\n"
+	"- 질문과 같은 언어로 답변하세요. 한국어 질문이면 한국어로.\n"
+	"- 답변은 간결하되, 근거가 있는 분석을 제공하세요.\n"
+	"- 숫자만 나열하지 말고 해석에 집중하세요. '왜?'와 '그래서?'를 설명하세요."
 )
 
 # 멀티턴 히스토리에서 최근 N턴만 포함 (토큰 절약)
@@ -496,10 +629,116 @@ async def _plain_chat(req: AskRequest):
 		raise HTTPException(status_code=500, detail=str(e))
 
 
-async def _stream_ask(c: Company | None, req: AskRequest):
-	"""SSE 스트리밍 generator."""
+def _build_snapshot(company: Company) -> dict | None:
+	"""ratios + 핵심 시계열에서 즉시 표시할 스냅샷 데이터 추출."""
+	ratios = getattr(company, "ratios", None)
+	if ratios is None:
+		return None
+
+	def _fmt(val, suffix=""):
+		if val is None:
+			return None
+		abs_v = abs(val)
+		sign = "-" if val < 0 else ""
+		if abs_v >= 1e12:
+			return f"{sign}{abs_v / 1e12:,.1f}조{suffix}"
+		if abs_v >= 1e8:
+			return f"{sign}{abs_v / 1e8:,.0f}억{suffix}"
+		if abs_v >= 1e4:
+			return f"{sign}{abs_v / 1e4:,.0f}만{suffix}"
+		if abs_v >= 1:
+			return f"{sign}{abs_v:,.0f}{suffix}"
+		return f"0{suffix}"
+
+	def _pct(val):
+		return f"{val:.1f}%" if val is not None else None
+
+	def _judge_pct(val, good, caution):
+		if val is None:
+			return None
+		if val >= good:
+			return "good"
+		if val >= caution:
+			return "caution"
+		return "danger"
+
+	def _judge_pct_inv(val, good, caution):
+		if val is None:
+			return None
+		if val <= good:
+			return "good"
+		if val <= caution:
+			return "caution"
+		return "danger"
+
+	items = []
+
+	if ratios.revenueTTM is not None:
+		items.append({"label": "매출(TTM)", "value": _fmt(ratios.revenueTTM), "status": None})
+	if ratios.operatingIncomeTTM is not None:
+		items.append({"label": "영업이익(TTM)", "value": _fmt(ratios.operatingIncomeTTM), "status": "good" if ratios.operatingIncomeTTM > 0 else "danger"})
+	if ratios.netIncomeTTM is not None:
+		items.append({"label": "순이익(TTM)", "value": _fmt(ratios.netIncomeTTM), "status": "good" if ratios.netIncomeTTM > 0 else "danger"})
+	if ratios.operatingMargin is not None:
+		items.append({"label": "영업이익률", "value": _pct(ratios.operatingMargin), "status": _judge_pct(ratios.operatingMargin, 10, 5)})
+	if ratios.roe is not None:
+		items.append({"label": "ROE", "value": _pct(ratios.roe), "status": _judge_pct(ratios.roe, 10, 5)})
+	if ratios.roa is not None:
+		items.append({"label": "ROA", "value": _pct(ratios.roa), "status": _judge_pct(ratios.roa, 5, 2)})
+	if ratios.debtRatio is not None:
+		items.append({"label": "부채비율", "value": _pct(ratios.debtRatio), "status": _judge_pct_inv(ratios.debtRatio, 100, 200)})
+	if ratios.currentRatio is not None:
+		items.append({"label": "유동비율", "value": _pct(ratios.currentRatio), "status": _judge_pct(ratios.currentRatio, 150, 100)})
+	if ratios.fcf is not None:
+		items.append({"label": "FCF", "value": _fmt(ratios.fcf), "status": "good" if ratios.fcf > 0 else "danger"})
+	if ratios.revenueGrowth3Y is not None:
+		items.append({"label": "매출 3Y CAGR", "value": _pct(ratios.revenueGrowth3Y), "status": _judge_pct(ratios.revenueGrowth3Y, 5, 0)})
+
+	annual = getattr(company, "annual", None)
+	trend = None
+	if annual is not None:
+		series, years = annual
+		if years and len(years) >= 2:
+			rev_list = series.get("IS", {}).get("revenue")
+			if rev_list:
+				n = min(5, len(rev_list))
+				recent_years = years[-n:]
+				recent_vals = rev_list[-n:]
+				trend = {"years": recent_years, "values": [v for v in recent_vals]}
+
+	if not items:
+		return None
+
+	snapshot: dict[str, Any] = {"items": items}
+	if trend:
+		snapshot["trend"] = trend
+	if ratios.warnings:
+		snapshot["warnings"] = ratios.warnings[:3]
+
+	return snapshot
+
+
+async def _stream_ask(c: Company | None, req: AskRequest, *, not_found_msg: str | None = None):
+	"""SSE 스트리밍 generator.
+
+	이벤트 흐름:
+	  meta → snapshot → context (모듈별, 여러 번) → chunk... → done
+	  tool_call/tool_result 이벤트는 agent_loop 사용 시 추가
+	"""
 	from dartlab.engines.llmAnalyzer import get_config
 	from dartlab.engines.llmAnalyzer.providers import create_provider
+
+	if not_found_msg:
+		yield {
+			"event": "meta",
+			"data": json.dumps({"company": None, "stockCode": None}, ensure_ascii=False),
+		}
+		yield {
+			"event": "chunk",
+			"data": json.dumps({"text": not_found_msg}, ensure_ascii=False),
+		}
+		yield {"event": "done", "data": "{}"}
+		return
 
 	yield {
 		"event": "meta",
@@ -519,33 +758,77 @@ async def _stream_ask(c: Company | None, req: AskRequest):
 		if overrides:
 			config_ = config_.merge(overrides)
 
+		use_compact = config_.provider in ("ollama", "codex", "claude-code")
 		history_msgs = _build_history_messages(req.history)
 
 		if c:
-			from dartlab.engines.llmAnalyzer.context import build_context, detect_year_range, _get_sector
-			from dartlab.engines.llmAnalyzer.pipeline import run_pipeline
+			from dartlab.engines.llmAnalyzer.context import (
+				build_context_by_module,
+				detect_year_range, _get_sector,
+			)
 			from dartlab.engines.llmAnalyzer.prompts import build_system_prompt, _classify_question
+			from dartlab.engines.llmAnalyzer.metadata import MODULE_META
 
-			context_text, included_tables = await asyncio.to_thread(
-				build_context, c, req.question,
+			snapshot = await asyncio.to_thread(_build_snapshot, c)
+			if snapshot:
+				yield {
+					"event": "snapshot",
+					"data": json.dumps(snapshot, ensure_ascii=False),
+				}
+
+			modules_dict, included_tables, header_text = await asyncio.to_thread(
+				build_context_by_module, c, req.question,
 				req.include, req.exclude,
 			)
 
-			# 연도 범위를 meta 이벤트로 보충 전송
-			year_range = await asyncio.to_thread(detect_year_range, c, included_tables)
-			if year_range:
+			if "_full" in modules_dict:
+				context_text = modules_dict["_full"]
 				yield {
-					"event": "meta",
+					"event": "context",
 					"data": json.dumps({
-						"dataYearRange": year_range,
+						"module": "_full",
+						"label": "전체 데이터",
+						"text": context_text,
 					}, ensure_ascii=False),
 				}
+			else:
+				for mod_name in included_tables:
+					mod_text = modules_dict.get(mod_name, "")
+					if not mod_text:
+						continue
+					meta_info = MODULE_META.get(mod_name)
+					label = meta_info.label if meta_info else mod_name
+					yield {
+						"event": "context",
+						"data": json.dumps({
+							"module": mod_name,
+							"label": label,
+							"text": mod_text,
+						}, ensure_ascii=False),
+					}
+				parts = [header_text] if header_text else []
+				for name in included_tables:
+					if name in modules_dict:
+						parts.append(modules_dict[name])
+				context_text = "\n".join(parts)
 
-			pipeline_result = await asyncio.to_thread(
-				run_pipeline, c, req.question, included_tables,
-			)
-			if pipeline_result:
-				context_text = context_text + pipeline_result
+			if not use_compact:
+				from dartlab.engines.llmAnalyzer.pipeline import run_pipeline
+				pipeline_result = await asyncio.to_thread(
+					run_pipeline, c, req.question, included_tables,
+				)
+				if pipeline_result:
+					context_text = context_text + pipeline_result
+
+			meta_payload: dict[str, Any] = {"includedModules": included_tables}
+			if not use_compact:
+				year_range = await asyncio.to_thread(detect_year_range, c, included_tables)
+				if year_range:
+					meta_payload["dataYearRange"] = year_range
+			yield {
+				"event": "meta",
+				"data": json.dumps(meta_payload, ensure_ascii=False),
+			}
 
 			sector = _get_sector(c)
 			question_type = _classify_question(req.question)
@@ -554,6 +837,7 @@ async def _stream_ask(c: Company | None, req: AskRequest):
 				included_modules=included_tables,
 				sector=sector,
 				question_type=question_type,
+				compact=use_compact,
 			)
 			messages = [{"role": "system", "content": system}]
 			messages.extend(history_msgs)
@@ -565,19 +849,69 @@ async def _stream_ask(c: Company | None, req: AskRequest):
 
 		llm = create_provider(config_)
 
-		# 스트리밍 (blocking generator → async)
-		def _gen():
-			yield from llm.stream(messages)
+		# tool calling 지원 여부 확인
+		use_tools = c is not None and hasattr(llm, "complete_with_tools")
 
-		gen = _gen()
-		while True:
-			chunk = await asyncio.to_thread(next, gen, None)
-			if chunk is None:
-				break
-			yield {
-				"event": "chunk",
-				"data": json.dumps({"text": chunk}, ensure_ascii=False),
-			}
+		if use_tools:
+			from dartlab.engines.llmAnalyzer.agent import agent_loop, AGENT_SYSTEM_ADDITION
+
+			messages[0]["content"] += AGENT_SYSTEM_ADDITION
+
+			queue: asyncio.Queue = asyncio.Queue()
+			loop = asyncio.get_event_loop()
+
+			def _on_tool_call(name: str, args: dict):
+				loop.call_soon_threadsafe(
+					queue.put_nowait,
+					{"event": "tool_call", "name": name, "arguments": args},
+				)
+
+			def _on_tool_result(name: str, result: str):
+				loop.call_soon_threadsafe(
+					queue.put_nowait,
+					{"event": "tool_result", "name": name, "result": result[:2000]},
+				)
+
+			async def _run_agent():
+				ans = await asyncio.to_thread(
+					agent_loop,
+					llm, messages, c,
+					max_turns=5,
+					on_tool_call=_on_tool_call,
+					on_tool_result=_on_tool_result,
+				)
+				await queue.put({"event": "_done", "answer": ans})
+
+			task = asyncio.create_task(_run_agent())
+
+			while True:
+				ev = await queue.get()
+				if ev["event"] == "_done":
+					if ev.get("answer"):
+						yield {
+							"event": "chunk",
+							"data": json.dumps({"text": ev["answer"]}, ensure_ascii=False),
+						}
+					break
+				yield {
+					"event": ev["event"],
+					"data": json.dumps(ev, ensure_ascii=False),
+				}
+
+			await task
+		else:
+			def _gen():
+				yield from llm.stream(messages)
+
+			gen = _gen()
+			while True:
+				chunk = await asyncio.to_thread(next, gen, None)
+				if chunk is None:
+					break
+				yield {
+					"event": "chunk",
+					"data": json.dumps({"text": chunk}, ensure_ascii=False),
+				}
 
 	except Exception as e:
 		yield {

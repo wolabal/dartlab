@@ -15,6 +15,10 @@ export const brand = {
 			label: '재무 숫자 데이터',
 			shards: ['data-finance-1', 'data-finance-2', 'data-finance-3', 'data-finance-4'],
 		},
+		report: {
+			label: '정기보고서 데이터',
+			shards: ['data-report-1', 'data-report-2', 'data-report-3', 'data-report-4'],
+		},
 	},
 
 	color: {

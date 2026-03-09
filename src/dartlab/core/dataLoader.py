@@ -11,9 +11,9 @@ import polars as pl
 
 from dartlab.core.dataConfig import (
     DATA_RELEASES,
-    financeAllTags,
     releaseApiUrl,
     releaseBaseUrl,
+    shardAllTags,
 )
 
 _DATA_ROOT = Path(__file__).resolve().parents[3] / "data"
@@ -87,7 +87,7 @@ def downloadAll(category: str = "docs", *, forceUpdate: bool = False) -> None:
     """GitHub Release의 전체 parquet을 한번에 다운로드.
 
     Args:
-        category: "docs" 또는 "finance".
+        category: "docs", "finance", "report".
         forceUpdate: True면 로컬 파일이 있어도 원격 업데이트 일자가 더 최신이면 재다운로드.
     """
     from alive_progress import alive_bar
@@ -96,10 +96,11 @@ def downloadAll(category: str = "docs", *, forceUpdate: bool = False) -> None:
     dataDir.mkdir(parents=True, exist_ok=True)
     label = DATA_RELEASES[category]["label"]
 
-    if category == "finance":
-        tags = financeAllTags()
+    conf = DATA_RELEASES[category]
+    if "shards" in conf:
+        tags = shardAllTags(category)
     else:
-        tags = [DATA_RELEASES[category]["tag"]]
+        tags = [conf["tag"]]
 
     allAssets: list[dict] = []
     print(f"[dartlab] {label} — GitHub Release 에셋 목록 조회 중... ({len(tags)}개 태그)")

@@ -150,6 +150,7 @@ class Company:
 
         self._hasDocs = _checkLocal(self.stockCode, "docs")
         self._hasFinance = _checkLocal(self.stockCode, "finance")
+        self._hasReport = _checkLocal(self.stockCode, "report")
 
         if self._hasDocs:
             df = loadData(self.stockCode, category="docs")
@@ -289,6 +290,44 @@ class Company:
             .sort("year", "rceptDate", descending=[True, True])
         )
         return docs
+
+    # ── 원본 데이터 (property) ──
+
+    @property
+    def rawDocs(self) -> pl.DataFrame | None:
+        """공시 문서 원본 parquet 전체 (가공 전)."""
+        if not self._hasDocs:
+            return None
+        cacheKey = "_rawDocs"
+        if cacheKey in self._cache:
+            return self._cache[cacheKey]
+        df = loadData(self.stockCode, category="docs")
+        self._cache[cacheKey] = df
+        return df
+
+    @property
+    def rawFinance(self) -> pl.DataFrame | None:
+        """재무제표 원본 parquet 전체 (가공 전)."""
+        if not self._hasFinance:
+            return None
+        cacheKey = "_rawFinance"
+        if cacheKey in self._cache:
+            return self._cache[cacheKey]
+        df = loadData(self.stockCode, category="finance")
+        self._cache[cacheKey] = df
+        return df
+
+    @property
+    def rawReport(self) -> pl.DataFrame | None:
+        """정기보고서 원본 parquet 전체 (가공 전)."""
+        if not self._hasReport:
+            return None
+        cacheKey = "_rawReport"
+        if cacheKey in self._cache:
+            return self._cache[cacheKey]
+        df = loadData(self.stockCode, category="report")
+        self._cache[cacheKey] = df
+        return df
 
     # ── 재무제표 (property) ──
 
@@ -766,7 +805,9 @@ class Company:
             c.ask("부채 리스크", provider="ollama", model="llama3.1")
         """
         from dartlab.engines.llmAnalyzer import get_config
-        from dartlab.engines.llmAnalyzer.context import build_context, _get_sector
+        from dartlab.engines.llmAnalyzer.context import (
+            build_context, build_compact_context, _get_sector,
+        )
         from dartlab.engines.llmAnalyzer.pipeline import run_pipeline
         from dartlab.engines.llmAnalyzer.prompts import build_system_prompt, _classify_question
         from dartlab.engines.llmAnalyzer.providers import create_provider
@@ -780,14 +821,21 @@ class Company:
         if overrides:
             config_ = config_.merge(overrides)
 
-        context_text, included_tables = build_context(
-            self, question, include=include, exclude=exclude,
-        )
+        use_compact = config_.provider in ("ollama", "codex", "claude-code")
 
-        # 파이프라인: LLM 호출 전 자동 분석
-        pipeline_result = run_pipeline(self, question, included_tables)
-        if pipeline_result:
-            context_text = context_text + pipeline_result
+        if use_compact:
+            context_text, included_tables = build_compact_context(
+                self, question, include=include, exclude=exclude,
+            )
+        else:
+            context_text, included_tables = build_context(
+                self, question, include=include, exclude=exclude,
+            )
+
+        if not use_compact:
+            pipeline_result = run_pipeline(self, question, included_tables)
+            if pipeline_result:
+                context_text = context_text + pipeline_result
 
         sector = _get_sector(self)
         question_type = _classify_question(question)
@@ -796,6 +844,7 @@ class Company:
             included_modules=included_tables,
             sector=sector,
             question_type=question_type,
+            compact=use_compact,
         )
         messages = [
             {"role": "system", "content": system},

@@ -104,7 +104,9 @@ AGENT_SYSTEM_ADDITION = """
 필요한 데이터를 도구를 통해 조회하고, 분석 결과를 종합하여 답변하세요.
 
 ### 사용 가능한 도구:
-- `get_data`: 기업의 재무/공시 데이터 조회 (BS, IS, CF, dividend 등)
+- `list_modules`: 사용 가능한 데이터 모듈 목록 조회 → **데이터를 모를 때 먼저 호출**
+- `search_data`: 키워드로 전체 모듈 검색 → 특정 계정과목이나 지표를 찾을 때
+- `get_data`: 특정 모듈의 데이터 조회 (BS, IS, CF, dividend 등)
 - `compute_ratios`: 재무비율 자동 계산 (부채비율, ROE 등)
 - `detect_anomalies`: 이상치 탐지 (급격한 변동, 부호 반전)
 - `compute_growth`: 성장률 매트릭스 (1Y/2Y/3Y/5Y CAGR)
@@ -114,7 +116,9 @@ AGENT_SYSTEM_ADDITION = """
 
 ### 분석 절차:
 1. 질문을 이해하고 필요한 데이터를 파악
-2. 도구로 데이터를 조회/분석
-3. 결과를 종합하여 구조화된 답변 작성
-4. 근거 데이터를 반드시 인용
+2. 어떤 데이터가 있는지 모르면 `list_modules` 또는 `search_data`를 먼저 호출
+3. 구체적 모듈 데이터를 `get_data`로 조회
+4. 필요 시 `compute_ratios`, `compute_growth` 등으로 지표 계산
+5. 결과를 종합하여 구조화된 답변 작성 (테이블 활용)
+6. 모든 수치에 출처(테이블명, 연도)를 반드시 인용
 """
