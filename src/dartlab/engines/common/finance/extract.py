@@ -1,0 +1,90 @@
+"""시계열 값 추출 유틸."""
+
+from __future__ import annotations
+
+from typing import Optional
+
+
+def getTTM(
+    series: dict[str, dict[str, list[Optional[float]]]],
+    sjDiv: str,
+    snakeId: str,
+) -> Optional[float]:
+    """최근 4개 non-null 값의 합 (IS/CF용 TTM).
+
+    Args:
+        series: buildTimeseries() 결과.
+        sjDiv: "IS" 또는 "CF".
+        snakeId: 계정 snakeId.
+
+    Returns:
+        TTM 합계 또는 None.
+    """
+    vals = series.get(sjDiv, {}).get(snakeId)
+    if not vals:
+        return None
+    last4 = [v for v in vals[-4:] if v is not None]
+    if len(last4) == 4:
+        return sum(last4)
+    return None
+
+
+def getLatest(
+    series: dict[str, dict[str, list[Optional[float]]]],
+    sjDiv: str,
+    snakeId: str,
+) -> Optional[float]:
+    """최신 non-null 값 (BS용).
+
+    Args:
+        series: buildTimeseries() 결과.
+        sjDiv: "BS".
+        snakeId: 계정 snakeId.
+
+    Returns:
+        최신 값 또는 None.
+    """
+    vals = series.get(sjDiv, {}).get(snakeId)
+    if not vals:
+        return None
+    for v in reversed(vals):
+        if v is not None:
+            return v
+    return None
+
+
+def getAnnualValues(
+    series: dict[str, dict[str, list[Optional[float]]]],
+    sjDiv: str,
+    snakeId: str,
+) -> list[Optional[float]]:
+    """해당 계정의 전체 시계열 값 리스트.
+
+    Returns:
+        값 리스트 (None 포함). 계정이 없으면 빈 리스트.
+    """
+    return series.get(sjDiv, {}).get(snakeId, [])
+
+
+def getRevenueGrowth3Y(
+    series: dict[str, dict[str, list[Optional[float]]]],
+) -> Optional[float]:
+    """매출 3년 CAGR (%).
+
+    연간 데이터 기준: 끝에서 4번째 vs 마지막 non-null.
+    """
+    vals = series.get("IS", {}).get("revenue")
+    if not vals:
+        return None
+
+    valid = [(i, v) for i, v in enumerate(vals) if v is not None and v > 0]
+    if len(valid) < 4:
+        return None
+
+    oldIdx, oldRev = valid[-4]
+    newIdx, newRev = valid[-1]
+    nYears = newIdx - oldIdx
+    if nYears <= 0 or oldRev <= 0:
+        return None
+
+    return ((newRev / oldRev) ** (1 / nYears) - 1) * 100

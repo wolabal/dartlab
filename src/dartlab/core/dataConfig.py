@@ -19,11 +19,11 @@ _SHARD_RANGES = [
 DATA_RELEASES: dict[str, dict] = {
     "docs": {
         "tag": "data-docs",
-        "dir": "docsData",
+        "dir": "dart/docs",
         "label": "DART 공시 문서 데이터",
     },
     "finance": {
-        "dir": "financeData",
+        "dir": "dart/finance",
         "label": "재무 숫자 데이터",
         "shards": [
             {"tag": f"data-finance-{i+1}", **r}
@@ -31,12 +31,16 @@ DATA_RELEASES: dict[str, dict] = {
         ],
     },
     "report": {
-        "dir": "reportData",
+        "dir": "dart/report",
         "label": "정기보고서 데이터",
         "shards": [
             {"tag": f"data-report-{i+1}", **r}
             for i, r in enumerate(_SHARD_RANGES)
         ],
+    },
+    "edgar": {
+        "dir": "edgar/finance",
+        "label": "SEC EDGAR 재무 데이터",
     },
 }
 

@@ -7,8 +7,8 @@ from __future__ import annotations
 
 from typing import Optional, TYPE_CHECKING
 
-from dartlab.engines.dart.finance.extract import getLatest, getAnnualValues
-from dartlab.engines.dart.finance.ratios import RatioResult
+from dartlab.engines.common.finance.extract import getLatest, getAnnualValues
+from dartlab.engines.common.finance.ratios import RatioResult
 from dartlab.engines.insight.benchmark import getBenchmark, sectorAdjustment
 from dartlab.engines.insight.detector import detectIncompleteYear
 from dartlab.engines.insight.types import Flag, InsightResult

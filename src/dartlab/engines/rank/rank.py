@@ -75,7 +75,7 @@ def buildSnapshot(*, verbose: bool = True) -> dict[str, RankInfo]:
     from dartlab.core.kindList import getKindList
     from dartlab.engines.sector import classify
     from dartlab.engines.dart.finance.pivot import buildAnnual
-    from dartlab.engines.dart.finance.ratios import calcRatios
+    from dartlab.engines.common.finance.ratios import calcRatios
 
     kindDf = getKindList()
     codes = kindDf["종목코드"].to_list()

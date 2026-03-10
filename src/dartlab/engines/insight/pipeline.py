@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from dartlab.engines.dart.finance.pivot import buildTimeseries, buildAnnual
-from dartlab.engines.dart.finance.ratios import calcRatios
+from dartlab.engines.common.finance.ratios import calcRatios
 from dartlab.engines.insight.anomaly import runAnomalyDetection
 from dartlab.engines.insight.detector import detectFinancialSector
 from dartlab.engines.sector.types import Sector

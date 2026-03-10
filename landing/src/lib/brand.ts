@@ -2,7 +2,7 @@ export const brand = {
 	name: 'DartLab',
 	tagline: 'Read Beyond the Numbers',
 	description: 'A Python library for comprehensive DART disclosure analysis',
-	version: '0.3.0',
+	version: '0.3.1',
 	url: 'https://eddmpython.github.io/dartlab/',
 	repo: 'https://github.com/eddmpython/dartlab',
 	pypi: 'https://pypi.org/project/dartlab/',
@@ -11,15 +11,18 @@ export const brand = {
 	author: 'eddmpython',
 
 	data: {
-		docs: { tag: 'data-docs', label: 'DART 공시 문서 데이터' },
+		docs: { tag: 'data-docs', dir: 'dart/docs', label: 'DART 공시 문서 데이터' },
 		finance: {
+			dir: 'dart/finance',
 			label: '재무 숫자 데이터',
 			shards: ['data-finance-1', 'data-finance-2', 'data-finance-3', 'data-finance-4'],
 		},
 		report: {
+			dir: 'dart/report',
 			label: '정기보고서 데이터',
 			shards: ['data-report-1', 'data-report-2', 'data-report-3', 'data-report-4'],
 		},
+		edgar: { dir: 'edgar/finance', label: 'SEC EDGAR 재무 데이터' },
 	},
 
 	color: {

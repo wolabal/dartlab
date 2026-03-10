@@ -38,54 +38,17 @@ from dartlab.core.kindList import (
 from dartlab.engines.dart.docs.notes import Notes
 
 
-# ── 모듈 레지스트리 ──
+# ── 모듈 레지스트리 (core/registry.py에서 자동 생성) ──
 # (모듈 import 경로, 함수명, 한글 라벨, primary DataFrame 추출)
+# fsSummary/statements는 내부 디스패치 전용 (BS/IS/CF property가 statements를 호출)
+from dartlab.core.registry import getModuleEntries as _getModuleEntries
+
 _MODULE_REGISTRY: list[tuple[str, str, str, Any]] = [
-    # 재무제표
     ("dartlab.engines.dart.docs.finance.summary", "fsSummary", "요약재무정보", None),
     ("dartlab.engines.dart.docs.finance.statements", "statements", "재무제표", None),
-    ("dartlab.engines.dart.docs.finance.segment", "segments", "부문정보", lambda r: r.revenue),
-    ("dartlab.engines.dart.docs.finance.tangibleAsset", "tangibleAsset", "유형자산", lambda r: r.movementDf),
-    ("dartlab.engines.dart.docs.finance.costByNature", "costByNature", "비용성격별분류", lambda r: r.timeSeries),
-    # 정기보고서
-    ("dartlab.engines.dart.docs.finance.dividend", "dividend", "배당", lambda r: r.timeSeries),
-    ("dartlab.engines.dart.docs.finance.majorHolder", "majorHolder", "최대주주", lambda r: r.timeSeries),
-    ("dartlab.engines.dart.docs.finance.employee", "employee", "직원현황", lambda r: r.timeSeries),
-    ("dartlab.engines.dart.docs.finance.subsidiary", "subsidiary", "자회사투자", lambda r: r.timeSeries),
-    ("dartlab.engines.dart.docs.finance.bond", "bond", "채무증권", lambda r: r.timeSeries),
-    ("dartlab.engines.dart.docs.finance.shareCapital", "shareCapital", "주식현황", lambda r: r.timeSeries),
-    ("dartlab.engines.dart.docs.finance.executive", "executive", "임원현황", lambda r: r.executiveDf),
-    ("dartlab.engines.dart.docs.finance.executivePay", "executivePay", "임원보수", lambda r: r.payByTypeDf),
-    ("dartlab.engines.dart.docs.finance.audit", "audit", "감사의견", lambda r: r.opinionDf),
-    ("dartlab.engines.dart.docs.finance.boardOfDirectors", "boardOfDirectors", "이사회", lambda r: r.boardDf),
-    ("dartlab.engines.dart.docs.finance.capitalChange", "capitalChange", "자본변동", lambda r: r.capitalDf),
-    ("dartlab.engines.dart.docs.finance.contingentLiability", "contingentLiability", "우발부채", lambda r: r.guaranteeDf),
-    ("dartlab.engines.dart.docs.finance.internalControl", "internalControl", "내부통제", lambda r: r.controlDf),
-    ("dartlab.engines.dart.docs.finance.relatedPartyTx", "relatedPartyTx", "관계자거래", lambda r: r.revenueTxDf),
-    ("dartlab.engines.dart.docs.finance.rnd", "rnd", "R&D", lambda r: r.rndDf),
-    ("dartlab.engines.dart.docs.finance.sanction", "sanction", "제재현황", lambda r: r.sanctionDf),
-    ("dartlab.engines.dart.docs.finance.affiliateGroup", "affiliateGroup", "계열사", lambda r: r.affiliateDf),
-    ("dartlab.engines.dart.docs.finance.fundraising", "fundraising", "증자감자", lambda r: r.issuanceDf),
-    ("dartlab.engines.dart.docs.finance.productService", "productService", "주요제품", lambda r: r.productDf),
-    ("dartlab.engines.dart.docs.finance.salesOrder", "salesOrder", "매출수주", lambda r: r.salesDf),
-    ("dartlab.engines.dart.docs.finance.riskDerivative", "riskDerivative", "위험관리", lambda r: r.fxDf),
-    ("dartlab.engines.dart.docs.finance.articlesOfIncorporation", "articlesOfIncorporation", "정관", lambda r: r.changesDf),
-    ("dartlab.engines.dart.docs.finance.otherFinance", "otherFinance", "기타재무", lambda r: r.badDebtDf),
-    ("dartlab.engines.dart.docs.finance.companyHistory", "companyHistory", "연혁", lambda r: r.eventsDf),
-    ("dartlab.engines.dart.docs.finance.shareholderMeeting", "shareholderMeeting", "주주총회", lambda r: r.agendaDf),
-    ("dartlab.engines.dart.docs.finance.auditSystem", "auditSystem", "감사제도", lambda r: r.committeeDf),
-    ("dartlab.engines.dart.docs.finance.investmentInOther", "investmentInOther", "타법인출자", lambda r: r.investmentDf),
-    ("dartlab.engines.dart.docs.finance.companyOverviewDetail", "companyOverviewDetail", "회사개요",
-     lambda r: {
-         "foundedDate": r.foundedDate, "listedDate": r.listedDate,
-         "address": r.address, "ceo": r.ceo,
-         "mainBusiness": r.mainBusiness, "website": r.website,
-     }),
-    # 공시 서술
-    ("dartlab.engines.dart.docs.disclosure.business", "business", "사업의내용", lambda r: r.sections),
-    ("dartlab.engines.dart.docs.disclosure.companyOverview", "companyOverview", "회사개요정량", None),
-    ("dartlab.engines.dart.docs.disclosure.mdna", "mdna", "MD&A", lambda r: r.overview),
-    ("dartlab.engines.dart.docs.disclosure.rawMaterial", "rawMaterial", "원재료설비", None),
+] + [
+    (e.modulePath, e.funcName, e.label, e.extractor)
+    for e in _getModuleEntries()
 ]
 
 # 모듈명 → 레지스트리 인덱스
@@ -692,7 +655,7 @@ class Company:
         cacheKey = f"_ratios_{fsDivPref}"
         if cacheKey in self._cache:
             return self._cache[cacheKey]
-        from dartlab.engines.dart.finance.ratios import calcRatios
+        from dartlab.engines.common.finance.ratios import calcRatios
         ts = self._getFinanceBuild("q", fsDivPref)
         if ts is None:
             return None
@@ -943,6 +906,33 @@ class Company:
             result["ratios"] = self.ratios
 
         return result
+
+    # ── Excel 내보내기 ──
+
+    def toExcel(
+        self,
+        outputPath: str | None = None,
+        modules: list[str] | None = None,
+    ) -> str:
+        """Excel 파일로 내보내기.
+
+        Args:
+            outputPath: 저장 경로. None이면 '{종목코드}_{회사명}.xlsx'.
+            modules: 포함할 시트. None이면 전체.
+                가능한 값: "IS", "BS", "CF", "ratios", "dividend", "employee"
+
+        Returns:
+            저장된 파일 경로.
+
+        Example::
+
+            c = Company("005930")
+            c.toExcel()                          # 005930_삼성전자.xlsx
+            c.toExcel("output.xlsx")             # 지정 경로
+            c.toExcel(modules=["IS", "BS"])      # 시트 선택
+        """
+        from dartlab.export.excel import exportToExcel
+        return exportToExcel(self, outputPath=outputPath, modules=modules)
 
     # ── get() — 모듈 전체 결과 객체 접근 ──
 

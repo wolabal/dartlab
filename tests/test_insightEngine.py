@@ -26,7 +26,7 @@ from dartlab.engines.insight.grading import (
     analyzeRiskSummary,
     analyzeOpportunitySummary,
 )
-from dartlab.engines.dart.finance.ratios import RatioResult
+from dartlab.engines.common.finance.ratios import RatioResult
 from dartlab.engines.sector.types import Sector
 from dartlab.engines.insight.anomaly import (
     _yoyChange,

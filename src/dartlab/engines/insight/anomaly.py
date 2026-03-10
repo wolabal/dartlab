@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from dartlab.engines.dart.finance.extract import getAnnualValues
+from dartlab.engines.common.finance.extract import getAnnualValues
 from dartlab.engines.insight.types import Anomaly
 
 

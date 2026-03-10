@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import Optional
 
-from dartlab.engines.dart.finance.extract import getLatest, getAnnualValues
-from dartlab.engines.dart.finance.ratios import RatioResult
+from dartlab.engines.common.finance.extract import getLatest, getAnnualValues
+from dartlab.engines.common.finance.ratios import RatioResult
 
 
 def detectIncompleteYear(qPeriods: list[str]) -> tuple[str, int]:

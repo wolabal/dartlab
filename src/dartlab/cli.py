@@ -63,6 +63,12 @@ def main():
 	ai_parser.add_argument("--dev", action="store_true", help="개발 모드 (Svelte dev 서버 동시 실행)")
 	ai_parser.add_argument("--no-browser", action="store_true", help="브라우저 자동 열기 비활성화")
 
+	# ── dartlab excel ──
+	excel_parser = sub.add_parser("excel", help="Excel 파일로 내보내기")
+	excel_parser.add_argument("company", help="종목코드 (005930) 또는 회사명 (삼성전자)")
+	excel_parser.add_argument("-o", "--output", default=None, help="출력 경로 (기본: {종목코드}_{회사명}.xlsx)")
+	excel_parser.add_argument("--modules", nargs="+", default=None, help="포함할 시트 (IS BS CF ratios dividend employee)")
+
 	# ── dartlab ui (별칭, 하위 호환) ──
 	ui_parser = sub.add_parser("ui")
 	ui_parser.add_argument("--port", type=int, default=8400)
@@ -82,6 +88,8 @@ def main():
 		_cmd_ask(args)
 	elif args.command == "setup":
 		_cmd_setup(args)
+	elif args.command == "excel":
+		_cmd_excel(args)
 	elif args.command in ("ai", "ui"):
 		if args.command == "ui":
 			print("  ℹ  dartlab ui → dartlab ai 로 변경되었습니다. dartlab ai를 사용하세요.\n")
@@ -295,6 +303,23 @@ def _cmd_ask(args):
 		print(answer)
 
 
+def _cmd_excel(args):
+	import dartlab
+
+	dartlab.verbose = False
+
+	try:
+		c = dartlab.Company(args.company)
+	except (ValueError, OSError) as e:
+		print(f"오류: {e}", file=sys.stderr)
+		sys.exit(1)
+
+	from dartlab.export.excel import exportToExcel
+
+	path = exportToExcel(c, outputPath=args.output, modules=args.modules)
+	print(f"  {c.corpName} ({c.stockCode}) → {path}")
+
+
 def _cmd_ui(args):
 	import webbrowser
 	from pathlib import Path
@@ -343,17 +368,27 @@ def _cmd_ui(args):
 		print()
 
 	import os
-	if not getattr(args, "no_browser", False) and not os.environ.get("DARTLAB_NO_BROWSER"):
+	from dartlab.server import ensure_port, run_server
+
+	should_open = not getattr(args, "no_browser", False) and not os.environ.get("DARTLAB_NO_BROWSER")
+	target = "http://localhost:5400" if args.dev else url
+
+	status = ensure_port(port)
+	if status == "already_running":
+		if should_open:
+			webbrowser.open(target)
+		return
+	if status == "failed":
+		return
+
+	if should_open:
+		import threading
 		def open_browser():
 			import time
 			time.sleep(1.5)
-			target = "http://localhost:5400" if args.dev else url
 			webbrowser.open(target)
-
-		import threading
 		threading.Thread(target=open_browser, daemon=True).start()
 
-	from dartlab.server import run_server
 	run_server(host=host, port=port)
 
 

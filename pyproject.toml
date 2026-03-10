@@ -32,6 +32,7 @@ classifiers = [
 ]
 dependencies = [
     "alive-progress>=3.3.0",
+    "openpyxl>=3.1.5",
     "polars>=1.0.0",
     "requests>=2.32.5",
     "rich>=14.3.3",
