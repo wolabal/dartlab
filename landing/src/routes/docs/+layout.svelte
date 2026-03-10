@@ -523,5 +523,6 @@
 	@media (max-width: 480px) {
 		.dl-docs-logo-text { display: none; }
 		.dl-docs-divider { display: none; }
+		.dl-docs-main { padding: 0.75rem 0.75rem 3rem; }
 	}
 </style>

@@ -118,5 +118,6 @@
 	@media (max-width: 480px) {
 		.dl-blog-logo-text { display: none; }
 		.dl-blog-divider { display: none; }
+		.dl-blog-main { padding: 1.5rem 0.75rem 4rem; }
 	}
 </style>

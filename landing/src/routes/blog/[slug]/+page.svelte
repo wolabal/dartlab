@@ -643,4 +643,8 @@
 		.blog-post-col { padding: 0; }
 		.post-nav { grid-template-columns: 1fr; }
 	}
+
+	@media (max-width: 480px) {
+		.blog-post-layout { padding: 0 0.75rem; }
+	}
 </style>
