@@ -64,8 +64,8 @@ def analyzePerformance(
     lastYear, qCount = detectIncompleteYear(qPeriods)
     incomplete = qCount < 4
 
-    revVals = getAnnualValues(aSeries, "IS", "revenue")
-    opVals = getAnnualValues(aSeries, "IS", "operating_income")
+    revVals = getAnnualValues(aSeries, "IS", "sales")
+    opVals = getAnnualValues(aSeries, "IS", "operating_profit")
 
     if incomplete and len(aYears) > 1:
         useRevVals = revVals[:-1]
@@ -85,11 +85,11 @@ def analyzePerformance(
     revGrowth = _getGrowthYoY(useRevVals)
     opGrowth = _getGrowthYoY(useOpVals)
 
-    qRevVals = qSeries.get("IS", {}).get("revenue", [])
+    qRevVals = qSeries.get("IS", {}).get("sales", [])
     if isFinancial and not any(v is not None for v in qRevVals):
-        qRevVals = qSeries.get("IS", {}).get("operating_income", [])
+        qRevVals = qSeries.get("IS", {}).get("operating_profit", [])
     revVolatility = _getVolatility(qRevVals)
-    qOpVals = qSeries.get("IS", {}).get("operating_income", [])
+    qOpVals = qSeries.get("IS", {}).get("operating_profit", [])
     opVolatility = _getVolatility(qOpVals)
 
     details: list[str] = []
@@ -256,10 +256,10 @@ def _analyzeProfitabilityFinancial(
     """금융업 전용 수익성 분석 (ROE/ROA/CIR)."""
     details.append("[금융업 수익성 기준 적용]")
     score = 0
-    netIncome = getLatest(aSeries, "IS", "net_income")
+    netIncome = getLatest(aSeries, "IS", "net_profit")
     totalAssets = getLatest(aSeries, "BS", "total_assets")
-    totalEquity = getLatest(aSeries, "BS", "total_equity") or getLatest(aSeries, "BS", "equity_including_nci")
-    opIncome = getLatest(aSeries, "IS", "operating_income")
+    totalEquity = getLatest(aSeries, "BS", "owners_of_parent_equity") or getLatest(aSeries, "BS", "total_stockholders_equity")
+    opIncome = getLatest(aSeries, "IS", "operating_profit")
     opExpense = getLatest(aSeries, "IS", "operating_expense")
 
     roe = (netIncome / totalEquity) * 100 if netIncome and totalEquity and totalEquity > 0 else None
@@ -452,7 +452,7 @@ def _analyzeCashflowFinancial(aSeries: dict) -> InsightResult:
 
     opCF = getLatest(aSeries, "CF", "operating_cashflow")
     dividendsPaid = getLatest(aSeries, "CF", "dividends_paid")
-    netIncome = getLatest(aSeries, "IS", "net_income")
+    netIncome = getLatest(aSeries, "IS", "net_profit")
 
     if opCF is not None:
         details.append(f"영업CF: {opCF / 1e8:,.0f}억")

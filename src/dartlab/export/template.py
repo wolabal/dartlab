@@ -9,7 +9,7 @@
 
     t = ExcelTemplate(name="나만의 양식", sheets=[
         SheetSpec(source="IS", label="손익계산서"),
-        SheetSpec(source="BS", label="재무상태표", columns=["revenue", "net_income"]),
+        SheetSpec(source="BS", label="재무상태표", columns=["sales", "net_profit"]),
         SheetSpec(source="dividend", label="배당"),
     ])
 

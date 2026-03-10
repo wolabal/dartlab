@@ -33,12 +33,12 @@ class TestEdgarMapper:
     def test_aliasConversion(self):
         from dartlab.engines.edgar.finance.mapper import EdgarMapper
 
-        assert EdgarMapper.mapToDart("CashAndCashEquivalentsAtCarryingValue", "BS") == "cash_and_equivalents"
+        assert EdgarMapper.mapToDart("CashAndCashEquivalentsAtCarryingValue", "BS") == "cash_and_cash_equivalents"
 
     def test_stmtOverride_netIncome(self):
         from dartlab.engines.edgar.finance.mapper import EdgarMapper
 
-        assert EdgarMapper.mapToDart("NetIncomeLoss", "IS") == "net_income"
+        assert EdgarMapper.mapToDart("NetIncomeLoss", "IS") == "net_profit"
         assert EdgarMapper.mapToDart("NetIncomeLoss", "CF") == "net_income_cf"
 
     def test_learnedSynonym(self):
@@ -79,7 +79,7 @@ class TestBuildTimeseries:
         assert result is not None
 
         series, periods = result
-        rev = series["IS"]["revenue"]
+        rev = series["IS"]["sales"]
         idx = periods.index("2024-Q1")
         assert rev[idx] == pytest.approx(119_575_000_000, rel=1e-6)
 
@@ -88,7 +88,7 @@ class TestBuildTimeseries:
 
         result = buildTimeseries(AAPL_CIK, edgarDir=EDGAR_DIR)
         series, periods = result
-        ni = series["IS"]["net_income"]
+        ni = series["IS"]["net_profit"]
         idx = periods.index("2024-Q4")
         assert ni[idx] == pytest.approx(14_736_000_000, rel=1e-6)
 
@@ -97,7 +97,7 @@ class TestBuildTimeseries:
 
         result = buildTimeseries(MSFT_CIK, edgarDir=EDGAR_DIR)
         series, periods = result
-        rev = series["IS"]["revenue"]
+        rev = series["IS"]["sales"]
         idx = periods.index("2024-Q2")
         assert rev[idx] == pytest.approx(62_020_000_000, rel=1e-6)
 
@@ -106,7 +106,7 @@ class TestBuildTimeseries:
 
         result = buildTimeseries(NVDA_CIK, edgarDir=EDGAR_DIR)
         series, periods = result
-        rev = series["IS"]["revenue"]
+        rev = series["IS"]["sales"]
         idx = periods.index("2025-Q4")
         assert rev[idx] == pytest.approx(39_331_000_000, rel=1e-6)
 
@@ -121,14 +121,14 @@ class TestBuildTimeseries:
             allSids.update(series[stmt].keys())
 
         l2Used = {
-            "revenue", "operating_income", "net_income", "total_assets",
-            "current_assets", "non_current_assets", "total_liabilities",
-            "current_liabilities", "non_current_liabilities", "total_equity",
-            "equity_including_nci", "cash_and_equivalents", "inventories",
-            "trade_receivables", "short_term_borrowings", "long_term_borrowings",
-            "operating_cashflow", "investing_cashflow", "financing_cashflow",
+            "sales", "operating_profit", "net_profit", "total_assets",
+            "current_assets", "noncurrent_assets", "total_liabilities",
+            "current_liabilities", "noncurrent_liabilities", "owners_of_parent_equity",
+            "total_stockholders_equity", "cash_and_cash_equivalents", "inventories",
+            "trade_and_other_receivables", "shortterm_borrowings", "longterm_borrowings",
+            "operating_cashflow", "investing_cashflow", "cash_flows_from_financing_activities",
             "cost_of_sales", "gross_profit", "profit_before_tax",
-            "income_tax_expense", "basic_eps", "diluted_eps", "ppe",
+            "income_taxes", "basic_earnings_per_share", "diluted_earnings_per_share", "tangible_assets",
         }
         covered = allSids & l2Used
         assert len(covered) >= 24
@@ -165,8 +165,8 @@ class TestBuildAnnual:
 
         series, years = result
         idx = years.index("2024")
-        rev = series["IS"]["revenue"][idx]
-        ni = series["IS"]["net_income"][idx]
+        rev = series["IS"]["sales"][idx]
+        ni = series["IS"]["net_profit"][idx]
         assert rev == pytest.approx(391_035_000_000, rel=1e-6)
         assert ni == pytest.approx(93_736_000_000, rel=1e-6)
 
@@ -176,7 +176,7 @@ class TestBuildAnnual:
         result = buildAnnual(MSFT_CIK, edgarDir=EDGAR_DIR)
         series, years = result
         idx = years.index("2024")
-        assert series["IS"]["revenue"][idx] == pytest.approx(245_122_000_000, rel=1e-6)
+        assert series["IS"]["sales"][idx] == pytest.approx(245_122_000_000, rel=1e-6)
 
     def test_nvdaFY2025(self):
         from dartlab.engines.edgar.finance.pivot import buildAnnual
@@ -184,8 +184,8 @@ class TestBuildAnnual:
         result = buildAnnual(NVDA_CIK, edgarDir=EDGAR_DIR)
         series, years = result
         idx = years.index("2025")
-        assert series["IS"]["revenue"][idx] == pytest.approx(130_497_000_000, rel=1e-6)
-        assert series["IS"]["net_income"][idx] == pytest.approx(72_880_000_000, rel=1e-6)
+        assert series["IS"]["sales"][idx] == pytest.approx(130_497_000_000, rel=1e-6)
+        assert series["IS"]["net_profit"][idx] == pytest.approx(72_880_000_000, rel=1e-6)
 
 
 @_skipNoData

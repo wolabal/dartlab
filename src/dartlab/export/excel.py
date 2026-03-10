@@ -43,10 +43,10 @@ _NUMBER_FMT = '#,##0'
 _SJ_LABELS = {"IS": "손익계산서", "BS": "재무상태표", "CF": "현금흐름표"}
 
 _ACCOUNT_LABELS_OVERRIDE: dict[str, str] = {
-	"total_equity": "자본총계(지배)",
+	"owners_of_parent_equity": "자본총계(지배)",
 	"operating_cashflow": "영업활동CF",
 	"investing_cashflow": "투자활동CF",
-	"financing_cashflow": "재무활동CF",
+	"cash_flows_from_financing_activities": "재무활동CF",
 	"capex": "유형자산취득",
 	"rnd_expenses": "연구개발비",
 	"amortization": "무형자산상각비",

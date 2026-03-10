@@ -119,12 +119,12 @@ class Compare:
     @property
     def revenue(self) -> pl.DataFrame:
         """기업별 연도별 매출 비교 테이블."""
-        return self._annualMetric("IS", "revenue")
+        return self._annualMetric("IS", "sales")
 
     @property
     def netIncome(self) -> pl.DataFrame:
         """기업별 연도별 순이익 비교 테이블."""
-        return self._annualMetric("IS", "net_income")
+        return self._annualMetric("IS", "net_profit")
 
     @property
     def totalAssets(self) -> pl.DataFrame:

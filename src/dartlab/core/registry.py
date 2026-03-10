@@ -588,6 +588,19 @@ _ENTRIES: list[DataEntry] = [
 		relatedModules=("audit", "boardOfDirectors"),
 	),
 	DataEntry(
+		name="affiliate", label="관계기업투자", category="report",
+		dataType="dataframe",
+		description="관계기업/공동기업 투자 변동 시계열. 지분법손익, 기초/기말 장부가 포함.",
+		modulePath="dartlab.engines.dart.docs.finance.affiliate",
+		funcName="affiliates", extractor=lambda r: r.movementDf,
+		requires="docs",
+		analysisHints=(
+			"관계기업 지분법손익이 연결 실적에 미치는 영향",
+			"투자 포트폴리오 변동(취득/처분) 추적",
+		),
+		relatedModules=("subsidiary", "investmentInOther", "affiliateGroup"),
+	),
+	DataEntry(
 		name="investmentInOther", label="타법인출자", category="report",
 		dataType="dataframe",
 		description="타법인 출자 현황. 투자목적, 지분율, 장부가 등.",

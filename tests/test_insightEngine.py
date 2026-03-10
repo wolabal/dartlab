@@ -231,24 +231,24 @@ class TestAnomaly:
         assert _yoyChange([None]) is None
 
     def test_earnings_quality_skip_financial(self):
-        series = {"IS": {"operating_income": [100, 200], "net_income": [50, 100]}, "CF": {"operating_cashflow": [80, 40]}}
+        series = {"IS": {"operating_profit": [100, 200], "net_profit": [50, 100]}, "CF": {"operating_cashflow": [80, 40]}}
         result = detectEarningsQuality(series, isFinancial=True)
         assert result == []
 
     def test_earnings_quality_detect(self):
-        series = {"IS": {"operating_income": [100, 200], "net_income": [50, 100]}, "CF": {"operating_cashflow": [80, 40]}}
+        series = {"IS": {"operating_profit": [100, 200], "net_profit": [50, 100]}, "CF": {"operating_cashflow": [80, 40]}}
         result = detectEarningsQuality(series, isFinancial=False)
         assert len(result) >= 1
         assert result[0].severity == "danger"
 
     def test_balance_sheet_capital_erosion(self):
-        series = {"BS": {"total_equity": [100, -50], "total_liabilities": [200, 300], "short_term_borrowings": [0, 0], "long_term_borrowings": [0, 0], "bonds": [0, 0]}}
+        series = {"BS": {"owners_of_parent_equity": [100, -50], "total_liabilities": [200, 300], "shortterm_borrowings": [0, 0], "longterm_borrowings": [0, 0], "debentures": [0, 0]}}
         result = detectBalanceSheetShift(series)
         found = [a for a in result if "자본잠식" in a.text]
         assert len(found) == 1
 
     def test_cash_burn_skip_financial(self):
-        series = {"BS": {"cash_and_equivalents": [100, 100]}, "CF": {"operating_cashflow": [-50], "financing_cashflow": [80]}}
+        series = {"BS": {"cash_and_cash_equivalents": [100, 100]}, "CF": {"operating_cashflow": [-50], "cash_flows_from_financing_activities": [80]}}
         result = detectCashBurn(series, isFinancial=True)
         cashBurnItems = [a for a in result if "차입으로" in a.text]
         assert len(cashBurnItems) == 0

@@ -178,7 +178,7 @@ def build_snapshot(company: Company) -> dict | None:
 	if annual is not None:
 		series, years = annual
 		if years and len(years) >= 2:
-			rev_list = series.get("IS", {}).get("revenue")
+			rev_list = series.get("IS", {}).get("sales")
 			if rev_list:
 				n = min(5, len(rev_list))
 				recent_years = years[-n:]

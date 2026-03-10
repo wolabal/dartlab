@@ -32,7 +32,7 @@ def detectFinancialSector(
     """금융업 자동 감지 (신호 2개 이상이면 금융업).
 
     신호 후보 6개:
-    1. revenue 없고 operating_income 있음
+    1. sales 없고 operating_profit 있음
     2. 부채비율 500% 초과
     3. 유동자산/유동부채 데이터 없음
     4. 이자수익 계정 존재
@@ -41,12 +41,12 @@ def detectFinancialSector(
     """
     signals: list[str] = []
 
-    revVals = getAnnualValues(aSeries, "IS", "revenue")
-    opVals = getAnnualValues(aSeries, "IS", "operating_income")
+    revVals = getAnnualValues(aSeries, "IS", "sales")
+    opVals = getAnnualValues(aSeries, "IS", "operating_profit")
     hasRevenue = any(v is not None for v in revVals)
     hasOpIncome = any(v is not None for v in opVals)
     if not hasRevenue and hasOpIncome:
-        signals.append("revenue 없고 operating_income 있음")
+        signals.append("sales 없고 operating_profit 있음")
 
     if ratios.debtRatio is not None and ratios.debtRatio > 500:
         signals.append(f"부채비율 {ratios.debtRatio:.0f}%")

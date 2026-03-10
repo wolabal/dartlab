@@ -489,6 +489,11 @@ class KRCompany:
         return self._get_primary("affiliateGroup")
 
     @property
+    def affiliate(self) -> pl.DataFrame | None:
+        """관계기업 투자 변동 시계열 DataFrame."""
+        return self._get_primary("affiliate")
+
+    @property
     def fundraising(self) -> pl.DataFrame | None:
         """증자/감자 이력 DataFrame."""
         return self._get_primary("fundraising")
@@ -700,7 +705,7 @@ class KRCompany:
 
             c = Company("005930")
             series, periods = c.timeseries
-            series["IS"]["revenue"]  # 분기별 매출 시계열
+            series["IS"]["sales"]  # 분기별 매출 시계열
         """
         return self._getFinanceBuild("q", "CFS")
 
@@ -715,7 +720,7 @@ class KRCompany:
 
             c = Company("005930")
             series, years = c.annual
-            series["IS"]["revenue"]  # 연도별 매출 시계열
+            series["IS"]["sales"]  # 연도별 매출 시계열
         """
         return self._getFinanceBuild("y", "CFS")
 

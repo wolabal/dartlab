@@ -26,7 +26,7 @@ def detectEarningsQuality(aSeries: dict, isFinancial: bool = False) -> list[Anom
     if isFinancial:
         return anomalies
 
-    opIncomeVals = getAnnualValues(aSeries, "IS", "operating_income")
+    opIncomeVals = getAnnualValues(aSeries, "IS", "operating_profit")
     opCfVals = getAnnualValues(aSeries, "CF", "operating_cashflow")
 
     opGrowth = _yoyChange(opIncomeVals)
@@ -46,7 +46,7 @@ def detectEarningsQuality(aSeries: dict, isFinancial: bool = False) -> list[Anom
                 opGrowth - cfGrowth,
             ))
 
-    netIncomeVals = getAnnualValues(aSeries, "IS", "net_income")
+    netIncomeVals = getAnnualValues(aSeries, "IS", "net_profit")
 
     latestNi = None
     latestCf = None
@@ -72,11 +72,11 @@ def detectWorkingCapitalAnomaly(aSeries: dict) -> list[Anomaly]:
     """운전자본 이상치: 매출채권/재고 급증 > 매출 증가."""
     anomalies: list[Anomaly] = []
 
-    arVals = getAnnualValues(aSeries, "BS", "trade_receivables")
+    arVals = getAnnualValues(aSeries, "BS", "trade_and_other_receivables")
     if not arVals:
         arVals = getAnnualValues(aSeries, "BS", "trade_and_other_receivables")
     invVals = getAnnualValues(aSeries, "BS", "inventories")
-    revVals = getAnnualValues(aSeries, "IS", "revenue")
+    revVals = getAnnualValues(aSeries, "IS", "sales")
 
     arGrowth = _yoyChange(arVals)
     invGrowth = _yoyChange(invVals)
@@ -113,10 +113,10 @@ def detectBalanceSheetShift(aSeries: dict) -> list[Anomaly]:
 
     checkItems = [
         ("BS", "total_liabilities", "부채총계"),
-        ("BS", "short_term_borrowings", "단기차입금"),
-        ("BS", "long_term_borrowings", "장기차입금"),
-        ("BS", "bonds", "사채"),
-        ("BS", "total_equity", "자본총계"),
+        ("BS", "shortterm_borrowings", "단기차입금"),
+        ("BS", "longterm_borrowings", "장기차입금"),
+        ("BS", "debentures", "사채"),
+        ("BS", "owners_of_parent_equity", "자본총계"),
     ]
 
     for sjDiv, snakeId, label in checkItems:
@@ -131,7 +131,7 @@ def detectBalanceSheetShift(aSeries: dict) -> list[Anomaly]:
                 change,
             ))
 
-    equityVals = getAnnualValues(aSeries, "BS", "total_equity")
+    equityVals = getAnnualValues(aSeries, "BS", "owners_of_parent_equity")
     valid = [v for v in equityVals if v is not None]
     if valid and valid[-1] is not None and valid[-1] < 0:
         anomalies.append(Anomaly(
@@ -147,7 +147,7 @@ def detectCashBurn(aSeries: dict, isFinancial: bool = False) -> list[Anomaly]:
     """현금 소진: 현금 급감, 영업CF적자+재무CF양수 (금융업 제외)."""
     anomalies: list[Anomaly] = []
 
-    cashVals = getAnnualValues(aSeries, "BS", "cash_and_equivalents")
+    cashVals = getAnnualValues(aSeries, "BS", "cash_and_cash_equivalents")
     cashChange = _yoyChange(cashVals)
 
     if cashChange is not None and cashChange < -50:
@@ -158,7 +158,7 @@ def detectCashBurn(aSeries: dict, isFinancial: bool = False) -> list[Anomaly]:
         ))
 
     opCfVals = getAnnualValues(aSeries, "CF", "operating_cashflow")
-    finCfVals = getAnnualValues(aSeries, "CF", "financing_cashflow")
+    finCfVals = getAnnualValues(aSeries, "CF", "cash_flows_from_financing_activities")
 
     latestOp = None
     latestFin = None
@@ -184,9 +184,9 @@ def detectMarginDivergence(aSeries: dict) -> list[Anomaly]:
     """마진 급변: 영업이익률 ±5%p, 영업외손익 급변."""
     anomalies: list[Anomaly] = []
 
-    revVals = getAnnualValues(aSeries, "IS", "revenue")
-    opVals = getAnnualValues(aSeries, "IS", "operating_income")
-    niVals = getAnnualValues(aSeries, "IS", "net_income")
+    revVals = getAnnualValues(aSeries, "IS", "sales")
+    opVals = getAnnualValues(aSeries, "IS", "operating_profit")
+    niVals = getAnnualValues(aSeries, "IS", "net_profit")
 
     validRev = [v for v in revVals if v is not None]
     validOp = [v for v in opVals if v is not None]
@@ -233,7 +233,7 @@ def detectFinancialSectorAnomaly(aSeries: dict, isFinancial: bool) -> list[Anoma
     anomalies: list[Anomaly] = []
 
     liabVals = getAnnualValues(aSeries, "BS", "total_liabilities")
-    equityVals = getAnnualValues(aSeries, "BS", "total_equity") or getAnnualValues(aSeries, "BS", "equity_including_nci")
+    equityVals = getAnnualValues(aSeries, "BS", "owners_of_parent_equity") or getAnnualValues(aSeries, "BS", "total_stockholders_equity")
 
     validLiab = [v for v in liabVals if v is not None]
     validEq = [v for v in equityVals if v is not None]
@@ -252,7 +252,7 @@ def detectFinancialSectorAnomaly(aSeries: dict, isFinancial: bool) -> list[Anoma
                     drShift,
                 ))
 
-    niVals = getAnnualValues(aSeries, "IS", "net_income")
+    niVals = getAnnualValues(aSeries, "IS", "net_profit")
     niChange = _yoyChange(niVals)
     if niChange is not None and niChange < -30:
         anomalies.append(Anomaly(

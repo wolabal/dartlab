@@ -10,7 +10,7 @@
 
     {
         "BS":  {"total_assets": [v1, v2, ...], ...},
-        "IS":  {"revenue": [...], ...},
+        "IS":  {"sales": [...], ...},
         "CF":  {"operating_cashflow": [...], ...},
     }
 
@@ -536,19 +536,19 @@ def _computeEquity(
     result: dict[str, dict[str, list[Optional[float]]]],
     periods: list[str],
 ) -> None:
-    nci = result["BS"].get("equity_nci")
-    eqNci = result["BS"].get("equity_including_nci")
-    teq = result["BS"].get("total_equity")
+    nci = result["BS"].get("noncontrolling_interests_equity")
+    eqNci = result["BS"].get("total_stockholders_equity")
+    teq = result["BS"].get("owners_of_parent_equity")
     redeemNci = result["BS"].get("redeemable_noncontrolling_interest")
     n = len(periods)
 
     if eqNci is None and teq is not None:
         eqNci = [None] * n
-        result["BS"]["equity_including_nci"] = eqNci
+        result["BS"]["total_stockholders_equity"] = eqNci
 
     if teq is None and eqNci is not None:
         teq = [None] * n
-        result["BS"]["total_equity"] = teq
+        result["BS"]["owners_of_parent_equity"] = teq
 
     if eqNci is not None and teq is not None:
         for i in range(n):
@@ -569,11 +569,11 @@ def _computeEquity(
 
 
 _DERIVED_FORMULAS = [
-    ("BS", "total_liabilities", "total_assets", "equity_including_nci", "subtract"),
-    ("BS", "total_liabilities", "current_liabilities", "non_current_liabilities", "add"),
-    ("IS", "gross_profit", "revenue", "cost_of_sales", "subtract"),
-    ("BS", "non_current_assets", "total_assets", "current_assets", "subtract"),
-    ("BS", "non_current_liabilities", "total_liabilities", "current_liabilities", "subtract"),
+    ("BS", "total_liabilities", "total_assets", "total_stockholders_equity", "subtract"),
+    ("BS", "total_liabilities", "current_liabilities", "noncurrent_liabilities", "add"),
+    ("IS", "gross_profit", "sales", "cost_of_sales", "subtract"),
+    ("BS", "noncurrent_assets", "total_assets", "current_assets", "subtract"),
+    ("BS", "noncurrent_liabilities", "total_liabilities", "current_liabilities", "subtract"),
 ]
 
 

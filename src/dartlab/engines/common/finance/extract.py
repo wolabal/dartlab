@@ -73,7 +73,7 @@ def getRevenueGrowth3Y(
 
     연간 데이터 기준: 끝에서 4번째 vs 마지막 non-null.
     """
-    vals = series.get("IS", {}).get("revenue")
+    vals = series.get("IS", {}).get("sales")
     if not vals:
         return None
 

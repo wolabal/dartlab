@@ -20,7 +20,7 @@ def mockCompany():
 	c._hasFinance = True
 	c._hasDocs = True
 	c._hasReport = True
-	c._cache = {"_finance_q_CFS": ({"IS": {"revenue": [1, 2, 3]}, "BS": {}, "CF": {}}, ["2022_Q1"])}
+	c._cache = {"_finance_q_CFS": ({"IS": {"sales": [1, 2, 3]}, "BS": {}, "CF": {}}, ["2022_Q1"])}
 	c.report = MagicMock()
 	c.report.dividend = None
 	c.report.employee = None
@@ -29,7 +29,7 @@ def mockCompany():
 
 def test_exportToExcel_creates_file(mockCompany):
 	series = {
-		"IS": {"revenue": [100, 200, 300], "net_income": [10, 20, 30]},
+		"IS": {"sales": [100, 200, 300], "net_profit": [10, 20, 30]},
 		"BS": {"total_assets": [1000, 2000, 3000]},
 		"CF": {"operating_cashflow": [50, 60, 70]},
 	}
@@ -51,7 +51,7 @@ def test_exportToExcel_creates_file(mockCompany):
 
 def test_exportToExcel_module_selection(mockCompany):
 	series = {
-		"IS": {"revenue": [100, 200]},
+		"IS": {"sales": [100, 200]},
 		"BS": {"total_assets": [1000, 2000]},
 		"CF": {},
 	}
@@ -69,7 +69,7 @@ def test_exportToExcel_module_selection(mockCompany):
 
 
 def test_exportToExcel_default_filename(mockCompany):
-	series = {"IS": {"revenue": [100]}, "BS": {}, "CF": {}}
+	series = {"IS": {"sales": [100]}, "BS": {}, "CF": {}}
 	years = ["2024"]
 
 	with patch(PATCH_TARGET, return_value=(series, years)):
