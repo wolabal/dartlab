@@ -48,6 +48,7 @@ function collectMdFiles(dir, prefix = '') {
 	if (!existsSync(dir)) return results;
 	for (const entry of readdirSync(dir, { withFileTypes: true })) {
 		if (entry.name === 'STATUS.md' || entry.name === 'index.md') continue;
+		if (entry.name === '_deprecated' || entry.name === '_backup' || entry.name === '_reference') continue;
 		const full = resolve(dir, entry.name);
 		if (entry.isDirectory()) {
 			results.push(...collectMdFiles(full, `${prefix}${entry.name}/`));
