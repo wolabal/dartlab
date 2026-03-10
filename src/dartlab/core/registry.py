@@ -592,7 +592,7 @@ _ENTRIES: list[DataEntry] = [
 		dataType="dataframe",
 		description="관계기업/공동기업 투자 변동 시계열. 지분법손익, 기초/기말 장부가 포함.",
 		modulePath="dartlab.engines.dart.docs.finance.affiliate",
-		funcName="affiliates", extractor=lambda r: r.movementDf,
+		funcName="affiliate", extractor=lambda r: r.movementDf,
 		requires="docs",
 		analysisHints=(
 			"관계기업 지분법손익이 연결 실적에 미치는 영향",

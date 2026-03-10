@@ -126,6 +126,7 @@ def _buildFullPreset() -> ExcelTemplate:
 			SheetSpec(source="segments", label="부문정보"),
 			SheetSpec(source="productService", label="주요제품"),
 			SheetSpec(source="subsidiary", label="자회사투자"),
+			SheetSpec(source="affiliate", label="관계기업투자"),
 			SheetSpec(source="bond", label="채무증권"),
 			SheetSpec(source="contingentLiability", label="우발부채"),
 			SheetSpec(source="capitalChange", label="자본변동"),

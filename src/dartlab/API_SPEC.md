@@ -153,6 +153,7 @@ c.totalAssets  # DataFrame — 연도별 총자산
 | `companyHistory` | 연혁 | `dataframe` | 회사 주요 연혁 이벤트 목록. |
 | `shareholderMeeting` | 주주총회 | `dataframe` | 주주총회 안건 및 의결 결과. |
 | `auditSystem` | 감사제도 | `dataframe` | 감사위원회 구성 및 활동 현황. |
+| `affiliate` | 관계기업투자 | `dataframe` | 관계기업/공동기업 투자 변동 시계열. 지분법손익, 기초/기말 장부가 포함. |
 | `investmentInOther` | 타법인출자 | `dataframe` | 타법인 출자 현황. 투자목적, 지분율, 장부가 등. |
 | `companyOverviewDetail` | 회사개요 | `dict` | 설립일, 상장일, 대표이사, 주소, 주요사업 등 기본 정보. |
 | `holderOverview` | 주주현황 | `custom` | 5% 이상 주주, 소액주주 현황, 의결권 현황. majorHolder보다 상세한 주주 구성. |

@@ -5,8 +5,11 @@ from dartlab.engines.dart.docs.finance.affiliate.types import (
     AffiliatesResult,
 )
 
+affiliate = affiliates
+
 __all__ = [
     "affiliates",
+    "affiliate",
     "AffiliateMovement",
     "AffiliateProfile",
     "AffiliatesResult",
