@@ -17,7 +17,7 @@ NVDA_CIK = "0001045810"
 
 HAS_EDGAR_DATA = (EDGAR_DIR / f"{AAPL_CIK}.parquet").exists()
 
-pytestmark = pytest.mark.skipif(
+_skipNoData = pytest.mark.skipif(
     not HAS_EDGAR_DATA,
     reason="EDGAR parquet 데이터 없음",
 )
@@ -70,6 +70,7 @@ class TestEdgarMapper:
         assert len(stmtTags["CF"]) > 0
 
 
+@_skipNoData
 class TestBuildTimeseries:
     def test_aaplRevenue(self):
         from dartlab.engines.edgar.finance.pivot import buildTimeseries
@@ -154,6 +155,7 @@ class TestBuildTimeseries:
                 assert len(vals) == len(periods)
 
 
+@_skipNoData
 class TestBuildAnnual:
     def test_aaplFY2024(self):
         from dartlab.engines.edgar.finance.pivot import buildAnnual
@@ -186,6 +188,7 @@ class TestBuildAnnual:
         assert series["IS"]["net_income"][idx] == pytest.approx(72_880_000_000, rel=1e-6)
 
 
+@_skipNoData
 class TestCalcRatiosCompat:
     def test_ratiosWithEdgarData(self):
         from dartlab.engines.edgar.finance.pivot import buildAnnual

@@ -3,7 +3,9 @@
 import sys
 
 from dartlab import config, core, engines
-from dartlab.company import Company
+from dartlab.company import Company, KRCompany
+from dartlab.compare import Compare
+from dartlab.usCompany import USCompany
 from dartlab.core.kindList import codeToName, getKindList, nameToCode, searchName
 from dartlab.engines import ai as llm
 
@@ -33,6 +35,9 @@ sys.modules[__name__].__class__ = _Module
 
 __all__ = [
     "Company",
+    "Compare",
+    "KRCompany",
+    "USCompany",
     "verbose",
     "dataDir",
     "getKindList",

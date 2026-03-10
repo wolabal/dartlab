@@ -76,9 +76,9 @@ def _findSection(report: pl.DataFrame) -> str | None:
 
 
 def _buildRndDf(rows: list[dict]) -> pl.DataFrame:
-    data = sorted(rows, key=lambda x: x["year"], reverse=True)
+    data = sorted(rows, key=lambda x: x["year"])
     schema = {
-        "year": pl.Utf8,
+        "year": pl.Int64,
         "rndExpense": pl.Int64,
         "revenueRatio": pl.Float64,
     }

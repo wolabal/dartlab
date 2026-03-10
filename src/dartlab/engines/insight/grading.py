@@ -15,7 +15,7 @@ from dartlab.engines.insight.types import Flag, InsightResult
 from dartlab.engines.sector.types import Sector
 
 if TYPE_CHECKING:
-    from dartlab.company import Company
+    from dartlab.company import KRCompany as Company
 
 
 def _scoreToGrade(score: int, maxScore: int) -> str:
@@ -471,7 +471,7 @@ def _analyzeCashflowFinancial(aSeries: dict) -> InsightResult:
     return InsightResult(grade, summary, details, risks, opps)
 
 
-def analyzeGovernance(company: Company) -> InsightResult:
+def analyzeGovernance(company: Company | None) -> InsightResult:
     """지배구조 분석."""
     details: list[str] = []
     risks: list[Flag] = []
@@ -479,7 +479,7 @@ def analyzeGovernance(company: Company) -> InsightResult:
     score = 0
     maxScore = 0
 
-    if company.report is None:
+    if company is None or company.report is None:
         return InsightResult("N", "정기보고서 데이터 없음")
 
     rpt = company.report

@@ -128,9 +128,9 @@ def _findBoardSection(df: pl.DataFrame, year: str) -> str | None:
 
 
 def _buildBoardDf(rows: list[dict]) -> pl.DataFrame:
-    data = sorted(rows, key=lambda x: x["year"], reverse=True)
+    data = sorted(rows, key=lambda x: x["year"])
     schema = {
-        "year": pl.Utf8,
+        "year": pl.Int64,
         "totalDirectors": pl.Int64,
         "outsideDirectors": pl.Int64,
         "meetingCount": pl.Int64,
@@ -144,9 +144,9 @@ def _buildBoardDf(rows: list[dict]) -> pl.DataFrame:
 
 
 def _buildCommitteeDf(rows: list[dict]) -> pl.DataFrame:
-    data = sorted(rows, key=lambda x: (x["year"], x["committeeName"]), reverse=True)
+    data = sorted(rows, key=lambda x: (x["year"], x["committeeName"]))
     schema = {
-        "year": pl.Utf8,
+        "year": pl.Int64,
         "committeeName": pl.Utf8,
         "composition": pl.Utf8,
         "members": pl.Utf8,

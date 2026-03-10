@@ -91,9 +91,9 @@ def _findSection(report: pl.DataFrame) -> str | None:
 
 
 def _buildGuaranteeDf(rows: list[dict]) -> pl.DataFrame:
-    data = sorted(rows, key=lambda x: x["year"], reverse=True)
+    data = sorted(rows, key=lambda x: x["year"])
     schema = {
-        "year": pl.Utf8,
+        "year": pl.Int64,
         "entity": pl.Utf8,
         "amount": pl.Int64,
     }
@@ -105,9 +105,9 @@ def _buildGuaranteeDf(rows: list[dict]) -> pl.DataFrame:
 
 
 def _buildRevenueTxDf(rows: list[dict]) -> pl.DataFrame:
-    data = sorted(rows, key=lambda x: x["year"], reverse=True)
+    data = sorted(rows, key=lambda x: x["year"])
     schema = {
-        "year": pl.Utf8,
+        "year": pl.Int64,
         "entity": pl.Utf8,
         "sales": pl.Int64,
         "purchases": pl.Int64,

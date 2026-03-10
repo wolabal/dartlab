@@ -4,17 +4,17 @@
 
     from dartlab import Company
 
-    c = Company("005930")
-    c.BS                # 재무상태표 DataFrame
-    c.IS                # 손익계산서 DataFrame
-    c.dividend          # 배당 시계열 DataFrame
-    c.notes.inventory   # 주석 · 재고자산 DataFrame
-    c.notes["재고자산"]  # 동일
-    d = c.all()         # 전체 dict
+    c = Company("005930")       # 한국 (DART)
+    c = Company("삼성전자")      # 한국 (회사명)
+    c = Company("AAPL")         # 미국 (EDGAR)
+    c.BS                        # 재무상태표 DataFrame
+    c.ratios                    # 재무비율
+    c.insights                  # 인사이트 등급
 """
 
 from __future__ import annotations
 
+import logging
 import re
 from typing import Any
 
@@ -92,9 +92,9 @@ def _ensureData(stockCode: str, category: str) -> bool:
 
 
 class _ReportAccessor:
-    """Company.report 네임스페이스 — reportEngine pivot 결과 접근."""
+    """KRCompany.report 네임스페이스 — reportEngine pivot 결과 접근."""
 
-    def __init__(self, company: Company):
+    def __init__(self, company: KRCompany):
         self._company = company
         self._cache: dict[str, Any] = {}
 
@@ -172,8 +172,8 @@ class _ReportAccessor:
         return f"ReportAccessor({len(API_TYPES)} apiTypes)"
 
 
-class Company:
-    """종목코드 또는 회사명으로 전체 분석에 접근.
+class KRCompany:
+    """DART 기반 한국 상장기업 분석.
 
     property로 바로 DataFrame에 접근할 수 있다. 접근 시 lazy 로딩 + 캐싱.
 
@@ -232,7 +232,7 @@ class Company:
             nNotes = len(notesRegistry) if self._hasDocs else 0
             printRepr(self.corpName, self.stockCode, nProps, nNotes)
             return ""
-        return f"Company({self.stockCode}, {self.corpName})"
+        return f"KRCompany({self.stockCode}, {self.corpName})"
 
     def guide(self):
         """전체 사용 가이드 출력."""
@@ -543,6 +543,13 @@ class Company:
         """회사 개요 상세 (설립일, 상장일, 대표이사 등)."""
         return self._get_primary("companyOverviewDetail")
 
+    # ── 부문정보 (property) ──
+
+    @property
+    def segments(self) -> pl.DataFrame | None:
+        """부문별 매출 시계열 DataFrame."""
+        return self._get_primary("segments")
+
     # ── 공시 서술 (property) ──
 
     @property
@@ -852,13 +859,15 @@ class Company:
         if config.verbose:
             from alive_progress import alive_bar
             with alive_bar(total, title=f"▶ {self.corpName}") as bar:
+                _log = logging.getLogger("dartlab.company")
                 for name, label in _ALL_PROPERTIES:
                     bar.text = label
                     try:
                         config.verbose = False
                         result[name] = getattr(self, name)
                         config.verbose = True
-                    except Exception:
+                    except (KeyError, ValueError, TypeError, FileNotFoundError, OSError) as e:
+                        _log.debug("all(): %s failed — %s", name, e)
                         result[name] = None
                         config.verbose = True
                     bar()
@@ -871,7 +880,8 @@ class Company:
                             config.verbose = False
                             result.setdefault("notes", {})[noteName] = self.notes._get(noteName)
                             config.verbose = True
-                        except Exception:
+                        except (KeyError, ValueError, TypeError, FileNotFoundError, OSError) as e:
+                            _log.debug("all(): notes.%s failed — %s", noteName, e)
                             result.setdefault("notes", {})[noteName] = None
                             config.verbose = True
                         bar()
@@ -886,10 +896,12 @@ class Company:
                 result["ratios"] = self.ratios
                 bar()
         else:
+            _log = logging.getLogger("dartlab.company")
             for name, label in _ALL_PROPERTIES:
                 try:
                     result[name] = getattr(self, name)
-                except Exception:
+                except (KeyError, ValueError, TypeError, FileNotFoundError, OSError) as e:
+                    _log.debug("all(): %s failed — %s", name, e)
                     result[name] = None
 
             if self._hasDocs and self.notes is not None:
@@ -897,7 +909,8 @@ class Company:
                 for noteName in notes_registry:
                     try:
                         notes_result[noteName] = self.notes._get(noteName)
-                    except Exception:
+                    except (KeyError, ValueError, TypeError, FileNotFoundError, OSError) as e:
+                        _log.debug("all(): notes.%s failed — %s", noteName, e)
                         notes_result[noteName] = None
                 result["notes"] = notes_result
 
@@ -1118,3 +1131,40 @@ class Company:
             on_tool_call=on_tool_call,
             on_tool_result=on_tool_result,
         )
+
+    @property
+    def market(self) -> str:
+        """시장 코드."""
+        return "KR"
+
+
+def _isUSTicker(s: str) -> bool:
+    """미국 ticker 형식 판별 (영문 대문자 1~5자리)."""
+    return bool(re.match(r"^[A-Za-z]{1,5}$", s))
+
+
+def Company(codeOrName: str) -> KRCompany:
+    """종목코드/회사명/ticker → 적절한 Company 인스턴스 생성.
+
+    판별 규칙:
+    - 6자리 숫자 → KRCompany (DART 종목코드)
+    - 한글 포함 → KRCompany (회사명 검색)
+    - 영문 1~5자리 → USCompany (SEC ticker)
+
+    Example::
+
+        c = Company("005930")       # 삼성전자 (KR)
+        c = Company("삼성전자")      # 삼성전자 (KR)
+        c = Company("AAPL")         # Apple (US)
+    """
+    if re.match(r"^\d{6}$", codeOrName):
+        return KRCompany(codeOrName)
+
+    if any("\uac00" <= ch <= "\ud7a3" for ch in codeOrName):
+        return KRCompany(codeOrName)
+
+    if _isUSTicker(codeOrName):
+        from dartlab.usCompany import USCompany
+        return USCompany(codeOrName)
+
+    return KRCompany(codeOrName)

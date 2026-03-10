@@ -122,9 +122,9 @@ def _dedup(rows: list[dict]) -> list[dict]:
 
 def _buildExecutiveDf(rows: list[dict]) -> pl.DataFrame:
     data = []
-    for r in sorted(rows, key=lambda x: x["year"], reverse=True):
+    for r in sorted(rows, key=lambda x: str(x["year"])):
         data.append({
-            "year": r["year"],
+            "year": int(r["year"]),
             "totalRegistered": r["totalRegistered"],
             "insideDirectors": r["insideDirectors"],
             "outsideDirectors": r["outsideDirectors"],
@@ -139,15 +139,15 @@ def _buildExecutiveDf(rows: list[dict]) -> pl.DataFrame:
 
 def _buildUnregPayDf(rows: list[dict]) -> pl.DataFrame:
     data = []
-    for r in sorted(rows, key=lambda x: x["year"], reverse=True):
+    for r in sorted(rows, key=lambda x: str(x["year"])):
         data.append({
-            "year": r["year"],
+            "year": int(r["year"]),
             "headcount": r["headcount"],
             "totalSalary": r["totalSalary"],
             "avgSalary": r["avgSalary"],
         })
     schema = {
-        "year": pl.Utf8,
+        "year": pl.Int64,
         "headcount": pl.Int64,
         "totalSalary": pl.Float64,
         "avgSalary": pl.Float64,

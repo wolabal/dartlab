@@ -1,16 +1,25 @@
 <script>
 	import { cn } from "$lib/utils.js";
-	import { fetchExportModules, downloadExcel } from "$lib/api.js";
-	import { FileSpreadsheet, Download, Loader2, X, CheckSquare, Square, ChevronDown, ChevronUp } from "lucide-svelte";
+	import { fetchExportModules, fetchTemplates, downloadExcel, saveTemplate, deleteTemplate } from "$lib/api.js";
+	import {
+		FileSpreadsheet, Download, Loader2, X, CheckSquare, Square,
+		ChevronDown, ChevronUp, Trash2, Save, LayoutTemplate
+	} from "lucide-svelte";
 
 	let { stockCode = null, corpName = "", onClose } = $props();
 
+	/** @type {"template" | "custom"} */
+	let mode = $state("template");
 	let modules = $state([]);
 	let selected = $state(new Set());
+	let templates = $state([]);
+	let selectedTemplate = $state(null);
 	let loading = $state(false);
 	let downloading = $state(false);
 	let error = $state("");
 	let expanded = $state(false);
+	let showNewTemplate = $state(false);
+	let newTemplateName = $state("");
 
 	const FINANCE_GROUP = new Set(["IS", "BS", "CF", "ratios"]);
 
@@ -19,7 +28,10 @@
 	let allSelected = $derived(selected.size === modules.length && modules.length > 0);
 
 	$effect(() => {
-		if (stockCode) loadModules();
+		if (stockCode) {
+			loadModules();
+			loadTemplates();
+		}
 	});
 
 	async function loadModules() {
@@ -33,6 +45,13 @@
 			error = e.message;
 		}
 		loading = false;
+	}
+
+	async function loadTemplates() {
+		try {
+			const data = await fetchTemplates();
+			templates = data.templates || [];
+		} catch {}
 	}
 
 	function toggle(name) {
@@ -62,18 +81,65 @@
 		selected = next;
 	}
 
+	function selectTemplate(t) {
+		selectedTemplate = t;
+	}
+
 	async function handleDownload() {
-		if (selected.size === 0 || downloading) return;
+		if (downloading) return;
 		downloading = true;
 		error = "";
 		try {
-			const mods = allSelected ? null : [...selected];
-			await downloadExcel(stockCode, mods);
+			if (mode === "template" && selectedTemplate) {
+				await downloadExcel(stockCode, null, selectedTemplate.templateId);
+			} else {
+				if (selected.size === 0) { downloading = false; return; }
+				const mods = allSelected ? null : [...selected];
+				await downloadExcel(stockCode, mods);
+			}
 		} catch (e) {
 			error = e.message;
 		}
 		downloading = false;
 	}
+
+	async function handleSaveAsTemplate() {
+		if (!newTemplateName.trim() || selected.size === 0) return;
+		error = "";
+		try {
+			const sheets = [...selected].map(name => {
+				const mod = modules.find(m => m.name === name);
+				return { source: name, label: mod?.label || name };
+			});
+			await saveTemplate({
+				name: newTemplateName.trim(),
+				sheets,
+				description: `${corpName} 기준 커스텀 양식`,
+			});
+			newTemplateName = "";
+			showNewTemplate = false;
+			await loadTemplates();
+		} catch (e) {
+			error = e.message;
+		}
+	}
+
+	async function handleDeleteTemplate(tid) {
+		error = "";
+		try {
+			await deleteTemplate(tid);
+			if (selectedTemplate?.templateId === tid) selectedTemplate = null;
+			await loadTemplates();
+		} catch (e) {
+			error = e.message;
+		}
+	}
+
+	let canDownload = $derived(
+		mode === "template"
+			? selectedTemplate !== null
+			: selected.size > 0
+	);
 </script>
 
 <div class="rounded-xl border border-dl-border bg-dl-bg-card/60 backdrop-blur-sm overflow-hidden animate-fadeIn">
@@ -90,14 +156,14 @@
 			<button
 				class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-dl-success/15 text-dl-success text-[11px] font-medium hover:bg-dl-success/25 transition-colors disabled:opacity-40"
 				onclick={handleDownload}
-				disabled={selected.size === 0 || downloading || loading}
+				disabled={!canDownload || downloading || loading}
 			>
 				{#if downloading}
 					<Loader2 size={12} class="animate-spin" />
 					다운로드 중
 				{:else}
 					<Download size={12} />
-					다운로드 ({selected.size})
+					다운로드
 				{/if}
 			</button>
 			{#if onClose}
@@ -111,17 +177,105 @@
 		</div>
 	</div>
 
+	<!-- Mode Tabs -->
+	<div class="flex border-b border-dl-border/30 px-4">
+		<button
+			class={cn(
+				"px-3 py-2 text-[11px] font-medium border-b-2 transition-colors",
+				mode === "template"
+					? "border-dl-success text-dl-success"
+					: "border-transparent text-dl-text-dim hover:text-dl-text-muted"
+			)}
+			onclick={() => mode = "template"}
+		>
+			<div class="flex items-center gap-1.5">
+				<LayoutTemplate size={12} />
+				템플릿
+			</div>
+		</button>
+		<button
+			class={cn(
+				"px-3 py-2 text-[11px] font-medium border-b-2 transition-colors",
+				mode === "custom"
+					? "border-dl-success text-dl-success"
+					: "border-transparent text-dl-text-dim hover:text-dl-text-muted"
+			)}
+			onclick={() => mode = "custom"}
+		>
+			<div class="flex items-center gap-1.5">
+				<CheckSquare size={12} />
+				직접 선택
+			</div>
+		</button>
+	</div>
+
 	<!-- Content -->
 	<div class="px-4 py-3">
 		{#if loading}
 			<div class="flex items-center gap-2 py-4 justify-center text-[12px] text-dl-text-dim">
 				<Loader2 size={14} class="animate-spin" />
-				모듈 목록 로드 중...
+				데이터 로드 중...
 			</div>
 		{:else if error}
 			<div class="text-[12px] text-dl-primary-light py-2">{error}</div>
+		{:else if mode === "template"}
+			<!-- Template Mode -->
+			<div class="space-y-2">
+				{#each templates as t}
+					<button
+						class={cn(
+							"w-full text-left px-3 py-2.5 rounded-lg border transition-all",
+							selectedTemplate?.templateId === t.templateId
+								? "border-dl-success/50 bg-dl-success/8"
+								: "border-dl-border/50 hover:border-dl-border hover:bg-white/[0.02]"
+						)}
+						onclick={() => selectTemplate(t)}
+					>
+						<div class="flex items-center justify-between">
+							<div>
+								<span class={cn(
+									"text-[12px] font-medium",
+									selectedTemplate?.templateId === t.templateId ? "text-dl-success" : "text-dl-text"
+								)}>
+									{t.name}
+								</span>
+								<span class="text-[10px] text-dl-text-dim ml-2">{t.sheets?.length || 0}개 시트</span>
+							</div>
+							<div class="flex items-center gap-1">
+								{#if t.templateId?.startsWith("preset_")}
+									<span class="text-[9px] px-1.5 py-0.5 rounded bg-dl-text-dim/10 text-dl-text-dim">프리셋</span>
+								{:else}
+									<!-- svelte-ignore node_invalid_placement_ssr -->
+									<span
+										role="button"
+										tabindex="0"
+										class="p-1 rounded text-dl-text-dim hover:text-red-400 transition-colors cursor-pointer"
+										onclick={(e) => { e.stopPropagation(); handleDeleteTemplate(t.templateId); }}
+										onkeydown={(e) => { if (e.key === "Enter") { e.stopPropagation(); handleDeleteTemplate(t.templateId); } }}
+										title="삭제"
+									>
+										<Trash2 size={11} />
+									</span>
+								{/if}
+							</div>
+						</div>
+						{#if t.description}
+							<div class="text-[10px] text-dl-text-dim mt-0.5">{t.description}</div>
+						{/if}
+						{#if selectedTemplate?.templateId === t.templateId && t.sheets?.length > 0}
+							<div class="flex flex-wrap gap-1 mt-2">
+								{#each t.sheets as s}
+									<span class="px-1.5 py-0.5 rounded text-[9px] bg-dl-success/10 text-dl-success/80">
+										{s.label || s.source}
+									</span>
+								{/each}
+							</div>
+						{/if}
+					</button>
+				{/each}
+			</div>
 		{:else if modules.length > 0}
-			<!-- Select all -->
+			<!-- Custom Mode -->
 			<div class="flex items-center justify-between mb-2">
 				<button
 					class="flex items-center gap-1.5 text-[11px] text-dl-text-muted hover:text-dl-text transition-colors"
@@ -134,18 +288,57 @@
 					{/if}
 					전체 선택
 				</button>
-				<button
-					class="flex items-center gap-1 text-[10px] text-dl-text-dim hover:text-dl-text-muted transition-colors"
-					onclick={() => expanded = !expanded}
-				>
-					{expanded ? "접기" : "펼치기"}
-					{#if expanded}
-						<ChevronUp size={12} />
-					{:else}
-						<ChevronDown size={12} />
+				<div class="flex items-center gap-2">
+					{#if !showNewTemplate}
+						<button
+							class="flex items-center gap-1 text-[10px] text-dl-text-dim hover:text-dl-success transition-colors disabled:opacity-40"
+							onclick={() => showNewTemplate = true}
+							disabled={selected.size === 0}
+							title="현재 선택을 템플릿으로 저장"
+						>
+							<Save size={11} />
+							템플릿 저장
+						</button>
 					{/if}
-				</button>
+					<button
+						class="flex items-center gap-1 text-[10px] text-dl-text-dim hover:text-dl-text-muted transition-colors"
+						onclick={() => expanded = !expanded}
+					>
+						{expanded ? "접기" : "펼치기"}
+						{#if expanded}
+							<ChevronUp size={12} />
+						{:else}
+							<ChevronDown size={12} />
+						{/if}
+					</button>
+				</div>
 			</div>
+
+			<!-- Save as template -->
+			{#if showNewTemplate}
+				<div class="flex items-center gap-2 mb-3 p-2 rounded-lg bg-dl-success/5 border border-dl-success/20">
+					<input
+						type="text"
+						class="flex-1 px-2 py-1 rounded text-[11px] bg-transparent border border-dl-border/50 text-dl-text placeholder:text-dl-text-dim focus:outline-none focus:border-dl-success/50"
+						placeholder="템플릿 이름"
+						bind:value={newTemplateName}
+						onkeydown={(e) => e.key === "Enter" && handleSaveAsTemplate()}
+					/>
+					<button
+						class="px-2 py-1 rounded text-[10px] bg-dl-success/20 text-dl-success hover:bg-dl-success/30 transition-colors disabled:opacity-40"
+						onclick={handleSaveAsTemplate}
+						disabled={!newTemplateName.trim()}
+					>
+						저장
+					</button>
+					<button
+						class="p-1 rounded text-dl-text-dim hover:text-dl-text transition-colors"
+						onclick={() => { showNewTemplate = false; newTemplateName = ""; }}
+					>
+						<X size={12} />
+					</button>
+				</div>
+			{/if}
 
 			<!-- Finance group -->
 			{#if financeModules.length > 0}

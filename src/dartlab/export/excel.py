@@ -29,7 +29,7 @@ from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 
 if TYPE_CHECKING:
-	from dartlab.company import Company
+	from dartlab.company import KRCompany as Company
 	from dartlab.export.template import ExcelTemplate, SheetSpec
 
 
@@ -42,40 +42,37 @@ _NUMBER_FMT = '#,##0'
 
 _SJ_LABELS = {"IS": "손익계산서", "BS": "재무상태표", "CF": "현금흐름표"}
 
-_ACCOUNT_LABELS = {
-	"revenue": "매출액",
-	"cost_of_sales": "매출원가",
-	"gross_profit": "매출총이익",
-	"selling_and_administrative_expenses": "판관비",
-	"operating_income": "영업이익",
-	"other_income": "기타수익",
-	"other_expenses": "기타비용",
-	"finance_income": "금융수익",
-	"finance_cost": "금융비용",
-	"profit_before_tax": "법인세차감전이익",
-	"income_tax_expense": "법인세비용",
-	"net_income": "당기순이익",
-	"comprehensive_income": "총포괄이익",
-	"current_assets": "유동자산",
-	"cash_and_equivalents": "현금및현금성자산",
-	"shortterm_financial_instruments": "단기금융상품",
-	"trade_receivables": "매출채권",
-	"inventories": "재고자산",
-	"non_current_assets": "비유동자산",
-	"ppe": "유형자산",
-	"intangible_assets": "무형자산",
-	"total_assets": "자산총계",
-	"current_liabilities": "유동부채",
-	"non_current_liabilities": "비유동부채",
-	"total_liabilities": "부채총계",
+_ACCOUNT_LABELS_OVERRIDE: dict[str, str] = {
 	"total_equity": "자본총계(지배)",
-	"equity_nci": "비지배지분",
-	"retained_earnings": "이익잉여금",
-	"issued_capital": "자본금",
 	"operating_cashflow": "영업활동CF",
 	"investing_cashflow": "투자활동CF",
 	"financing_cashflow": "재무활동CF",
+	"capex": "유형자산취득",
+	"rnd_expenses": "연구개발비",
+	"amortization": "무형자산상각비",
 }
+
+
+def _buildAccountLabels() -> dict[str, str]:
+	"""mapper.labelMap() 기반 + override 합성."""
+	try:
+		from dartlab.engines.dart.finance.mapper import AccountMapper
+		labels = dict(AccountMapper.get().labelMap())
+	except (ImportError, FileNotFoundError):
+		labels = {}
+	labels.update(_ACCOUNT_LABELS_OVERRIDE)
+	return labels
+
+
+_ACCOUNT_LABELS: dict[str, str] = {}
+
+
+def _getAccountLabels() -> dict[str, str]:
+	"""lazy 초기화."""
+	global _ACCOUNT_LABELS
+	if not _ACCOUNT_LABELS:
+		_ACCOUNT_LABELS = _buildAccountLabels()
+	return _ACCOUNT_LABELS
 
 _FINANCE_SHEETS = frozenset({"IS", "BS", "CF"})
 _SPECIAL_SHEETS = frozenset({"ratios"})
@@ -135,7 +132,7 @@ def _writeFinanceSheet(
 		effectiveVals = [vals[i] for i in yearIndices] if yearIndices else vals
 		if not any(v is not None for v in effectiveVals):
 			continue
-		ws.cell(row=row, column=1, value=_ACCOUNT_LABELS.get(snakeId, snakeId)).font = _ACCOUNT_FONT
+		ws.cell(row=row, column=1, value=_getAccountLabels().get(snakeId, snakeId)).font = _ACCOUNT_FONT
 		for colIdx, val in enumerate(effectiveVals, 2):
 			if val is not None:
 				cell = ws.cell(row=row, column=colIdx, value=round(val))
@@ -390,15 +387,26 @@ def exportWithTemplate(
 
 
 def listAvailableModules(c: Company) -> list[dict[str, str]]:
-	"""내보내기 가능한 모듈 목록 반환 (GUI/API용)."""
+	"""내보내기 가능한 모듈 목록 반환 (GUI/API용).
+
+	registry의 requires 필드로 빠르게 판정 (property 호출 없음).
+	"""
+	from dartlab.core.registry import getEntry
+
+	_DATA_FLAGS = {
+		"docs": c._hasDocs,
+		"finance": c._hasFinance,
+		"report": c._hasReport,
+	}
+
 	result = []
 	for name, label in _getAvailableModules(c):
-		if name in _FINANCE_SHEETS:
-			hasData = c._hasFinance
-		elif name == "ratios":
-			hasData = c._hasFinance
-		else:
-			hasData = _resolveData(c, name) is not None
-		if hasData:
-			result.append({"name": name, "label": label})
+		entry = getEntry(name)
+		if entry is not None and entry.requires:
+			if not _DATA_FLAGS.get(entry.requires, False):
+				continue
+		elif name in _FINANCE_SHEETS or name == "ratios":
+			if not c._hasFinance:
+				continue
+		result.append({"name": name, "label": label})
 	return result

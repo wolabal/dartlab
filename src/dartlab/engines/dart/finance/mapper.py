@@ -218,24 +218,54 @@ CORE_MAP: dict[str, str] = {
     "CashFlowsFromInvestingActivities": "investing_cashflow",
     "CashFlowsFromFinancingActivities": "financing_cashflow",
     "매출액": "revenue",
+    "매출원가": "cost_of_sales",
+    "매출총이익": "gross_profit",
+    "판매비와관리비": "selling_and_administrative_expenses",
     "영업이익": "operating_income",
+    "기타수익": "other_income",
+    "기타비용": "other_expenses",
+    "금융수익": "finance_income",
+    "금융비용": "finance_cost",
+    "법인세비용차감전순이익": "profit_before_tax",
+    "법인세비용": "income_tax_expense",
     "당기순이익": "net_income",
+    "총포괄이익": "comprehensive_income",
+    "기타포괄손익": "other_comprehensive_income",
+    "기본주당이익": "basic_eps",
+    "희석주당이익": "diluted_eps",
+    "지분법손익": "equity_method_income",
+    "감가상각비": "depreciation",
     "자산총계": "total_assets",
     "유동자산": "current_assets",
     "비유동자산": "non_current_assets",
     "현금및현금성자산": "cash_and_equivalents",
+    "단기금융상품": "shortterm_financial_instruments",
+    "매출채권및기타채권": "trade_receivables",
     "재고자산": "inventories",
+    "유형자산": "ppe",
+    "무형자산": "intangible_assets",
+    "관계기업및공동기업투자": "investments_in_associates",
     "부채총계": "total_liabilities",
     "유동부채": "current_liabilities",
     "비유동부채": "non_current_liabilities",
     "단기차입금": "short_term_borrowings",
     "장기차입금": "long_term_borrowings",
     "사채": "bonds",
+    "매입채무및기타채무": "trade_payables",
+    "이연법인세부채": "deferred_tax_liabilities",
     "자본총계": "equity_including_nci",
     "지배기업 소유주지분": "total_equity",
+    "비지배지분": "equity_nci",
+    "자본금": "issued_capital",
+    "주식발행초과금": "share_premium",
+    "이익잉여금": "retained_earnings",
+    "자기주식": "treasury_stock",
+    "기타자본구성요소": "other_equity_components",
     "영업활동현금흐름": "operating_cashflow",
     "투자활동현금흐름": "investing_cashflow",
     "재무활동현금흐름": "financing_cashflow",
+    "현금및현금성자산증감": "net_cash_increase",
+    "배당금": "dividends_paid",
 }
 
 
@@ -298,3 +328,32 @@ class AccountMapper:
                 return self._mappings[stripped_paren]
 
         return None
+
+    def labelMap(self) -> dict[str, str]:
+        """snakeId → 대표 한글명 매핑 (캐싱).
+
+        우선순위:
+        1. CORE_MAP 한글 항목의 역방향
+        2. accountMappings.json에서 한글명 중 가장 짧은 것
+        """
+        if hasattr(self, "_labelMap"):
+            return self._labelMap
+
+        result: dict[str, str] = {}
+
+        for name, snakeId in CORE_MAP.items():
+            if any("\uac00" <= ch <= "\ud7a3" for ch in name):
+                if snakeId not in result:
+                    result[snakeId] = name
+
+        if self._mappings:
+            reverse: dict[str, list[str]] = {}
+            for name, snakeId in self._mappings.items():
+                if any("\uac00" <= ch <= "\ud7a3" for ch in name):
+                    reverse.setdefault(snakeId, []).append(name)
+            for snakeId, names in reverse.items():
+                if snakeId not in result:
+                    result[snakeId] = min(names, key=len)
+
+        self._labelMap = result
+        return result

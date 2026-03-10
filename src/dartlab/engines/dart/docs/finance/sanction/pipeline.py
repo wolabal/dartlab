@@ -65,9 +65,9 @@ def _findSection(report: pl.DataFrame) -> str | None:
 
 
 def _buildSanctionDf(rows: list[dict]) -> pl.DataFrame:
-    data = sorted(rows, key=lambda x: x["year"], reverse=True)
+    data = sorted(rows, key=lambda x: x["year"])
     schema = {
-        "year": pl.Utf8,
+        "year": pl.Int64,
         "date": pl.Utf8,
         "agency": pl.Utf8,
         "subject": pl.Utf8,

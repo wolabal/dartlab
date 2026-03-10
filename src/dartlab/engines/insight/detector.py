@@ -8,6 +8,11 @@ from dartlab.engines.common.finance.extract import getLatest, getAnnualValues
 from dartlab.engines.common.finance.ratios import RatioResult
 
 
+def _parseYear(period: str) -> str:
+    """period 문자열에서 연도 추출. 'YYYY_QN' / 'YYYY-QN' 모두 지원."""
+    return period[:4]
+
+
 def detectIncompleteYear(qPeriods: list[str]) -> tuple[str, int]:
     """최신 연도의 분기 수를 반환.
 
@@ -15,7 +20,7 @@ def detectIncompleteYear(qPeriods: list[str]) -> tuple[str, int]:
         (lastYear, quarterCount). quarterCount < 4면 불완전 연도.
     """
     lastPeriod = qPeriods[-1]
-    lastYear = lastPeriod.split("_")[0]
+    lastYear = _parseYear(lastPeriod)
     qCount = sum(1 for p in qPeriods if p.startswith(lastYear))
     return lastYear, qCount
 

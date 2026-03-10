@@ -69,9 +69,9 @@ def _findSection(report: pl.DataFrame) -> str | None:
 
 
 def _buildControlDf(rows: list[dict]) -> pl.DataFrame:
-    data = sorted(rows, key=lambda x: x.get("year", ""), reverse=True)
+    data = sorted(rows, key=lambda x: x.get("year", 0))
     schema = {
-        "year": pl.Utf8,
+        "year": pl.Int64,
         "period": pl.Utf8,
         "opinion": pl.Utf8,
         "auditor": pl.Utf8,

@@ -144,9 +144,9 @@ def _pickCurrentFee(fees: list[dict], baseYear: str) -> dict | None:
 def _buildOpinionDf(rows: list[dict]) -> pl.DataFrame:
     """감사의견 시계열 DataFrame."""
     data = []
-    for r in sorted(rows, key=lambda x: x["year"], reverse=True):
+    for r in sorted(rows, key=lambda x: str(x["year"])):
         data.append({
-            "year": r["year"],
+            "year": int(r["year"]),
             "auditor": r["auditor"],
             "opinion": normalizeOpinion(r["opinion"]),
             "keyAuditMatters": r.get("keyAuditMatters", ""),
@@ -157,9 +157,9 @@ def _buildOpinionDf(rows: list[dict]) -> pl.DataFrame:
 def _buildFeeDf(rows: list[dict]) -> pl.DataFrame:
     """감사보수 시계열 DataFrame."""
     data = []
-    for r in sorted(rows, key=lambda x: x["year"], reverse=True):
+    for r in sorted(rows, key=lambda x: str(x["year"])):
         data.append({
-            "year": r["year"],
+            "year": int(r["year"]),
             "auditor": r["auditor"],
             "contractFee": r["contractFee"],
             "contractHours": r["contractHours"],
@@ -167,7 +167,7 @@ def _buildFeeDf(rows: list[dict]) -> pl.DataFrame:
             "actualHours": r["actualHours"],
         })
     schema = {
-        "year": pl.Utf8,
+        "year": pl.Int64,
         "auditor": pl.Utf8,
         "contractFee": pl.Float64,
         "contractHours": pl.Float64,

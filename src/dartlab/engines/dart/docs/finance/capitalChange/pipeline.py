@@ -124,9 +124,9 @@ def _findSection(report: pl.DataFrame, patterns: list[str]) -> str | None:
 
 
 def _buildCapitalDf(rows: list[dict]) -> pl.DataFrame:
-    data = sorted(rows, key=lambda x: x["year"], reverse=True)
+    data = sorted(rows, key=lambda x: x["year"])
     schema = {
-        "year": pl.Utf8,
+        "year": pl.Int64,
         "commonShares": pl.Int64,
         "preferredShares": pl.Int64,
         "commonParValue": pl.Int64,
@@ -142,9 +142,9 @@ def _buildCapitalDf(rows: list[dict]) -> pl.DataFrame:
 
 
 def _buildShareTotalDf(rows: list[dict]) -> pl.DataFrame:
-    data = sorted(rows, key=lambda x: x["year"], reverse=True)
+    data = sorted(rows, key=lambda x: x["year"])
     schema = {
-        "year": pl.Utf8,
+        "year": pl.Int64,
         "referenceDate": pl.Utf8,
         "authorizedCommon": pl.Int64,
         "authorizedPreferred": pl.Int64,
@@ -167,9 +167,9 @@ def _buildShareTotalDf(rows: list[dict]) -> pl.DataFrame:
 
 
 def _buildTreasuryDf(rows: list[dict]) -> pl.DataFrame:
-    data = sorted(rows, key=lambda x: x["year"], reverse=True)
+    data = sorted(rows, key=lambda x: x["year"])
     schema = {
-        "year": pl.Utf8,
+        "year": pl.Int64,
         "totalBegin": pl.Int64,
         "totalEnd": pl.Int64,
     }
